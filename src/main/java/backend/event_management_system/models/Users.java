@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,10 +19,11 @@ import java.util.stream.Collectors;
 import static java.util.Arrays.stream;
 
 @Entity
+@NoArgsConstructor
 public class Users implements Serializable, UserDetails {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Long id;
     private String username;
@@ -35,19 +37,6 @@ public class Users implements Serializable, UserDetails {
     private Date lastLoginDate;
     private Date lastLoginDateDisplay;
 
-
-    public Users(Long id, String username, String email, String profileImageUrl, String userPassword, String role, String[] authorities, Date joinDate, Date lastLoginDate, Date lastLoginDateDisplay) {
-        this.id = id;
-        this.username = username;
-        this.email = email;
-        this.profileImageUrl = profileImageUrl;
-        this.userPassword = userPassword;
-        this.role = role;
-        this.authorities = authorities;
-        this.joinDate = joinDate;
-        this.lastLoginDate = lastLoginDate;
-        this.lastLoginDateDisplay = lastLoginDateDisplay;
-    }
 
     public Long getId() {
         return id;
