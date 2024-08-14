@@ -16,6 +16,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping(path = {"/user"})
+@CrossOrigin(origins = "http://localhost:3000")
 public class UsersController {
 
     private final UsersService usersService;
@@ -27,25 +28,22 @@ public class UsersController {
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
-    @GetMapping(path = {"/home"})
-    public String homePageDemo(){
-        return "This is a demo page used for testing.";
-    }
 
     @PostMapping(path = {"/register"})
-    public ResponseEntity<Users> registerUser(@RequestParam("username")String username,
-                                              @RequestParam("email") String email,
-                                              @RequestParam("password") String password,
-                                              @RequestParam("role") Roles role
-                                            ) throws EmailExistException, UsernameExistException {
-
+    public ResponseEntity<?> registerUser(@RequestParam("username") String username,
+                                          @RequestParam("email") String email,
+                                          @RequestParam("password") String password,
+                                          @RequestParam("role") Roles role) {
         try {
             Users newUser = usersService.register(username, email, password, role.name());
             return new ResponseEntity<>(newUser, HttpStatus.CREATED);
         } catch (EmailExistException | UsernameExistException exception) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(exception.getMessage(), HttpStatus.CONFLICT);
+        } catch (Exception e) {
+            return new ResponseEntity<>("An error occurred during registration.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
 
     @PostMapping(path = {"/login"})
     public ResponseEntity<String> loginUser(@RequestParam("email") String email,
@@ -73,6 +71,5 @@ public class UsersController {
        List<Users> usersList = usersService.getUsers();
         return new ResponseEntity<>(usersList, HttpStatus.OK);
     }
-
 
 }
