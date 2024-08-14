@@ -1,11 +1,17 @@
 package backend.event_management_system.service;
 
 import backend.event_management_system.exceptions.*;
+import backend.event_management_system.jwt.JwtTokenProvider;
 import backend.event_management_system.models.Roles;
 import backend.event_management_system.models.Users;
 import backend.event_management_system.repository.UsersRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -22,19 +29,27 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
 
     private LoginAttemptService loginAttemptService;
     private UsersRepository usersRepository;
+    private JwtTokenProvider jwtTokenProvider;
     private BCryptPasswordEncoder bCryptPasswordEncoder;
+    private AuthenticationManager authenticationManager;
     private S3Service s3Service;
 
     @Autowired
-    public UsersService(LoginAttemptService loginAttemptService, BCryptPasswordEncoder bCryptPasswordEncoder, UsersRepository usersRepository) {
+    public UsersService(LoginAttemptService loginAttemptService, UsersRepository usersRepository, JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder bCryptPasswordEncoder, @Lazy AuthenticationManager authenticationManager, S3Service s3Service) {
         this.loginAttemptService = loginAttemptService;
-        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.usersRepository = usersRepository;
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.s3Service = s3Service;
     }
 
     @Override
-    public Users register(String username, String email, String password, Roles role) throws UsernameExistException, EmailExistException {
-            validateNewUsernameAndEmail(null, username, email );
+    public Users register(String username, String email, String password, String roleName) throws UsernameExistException, EmailExistException {
+
+        validateNewUsernameAndEmail(null, username, email );
+        Roles role = getRoleByName(roleName);
+
             Users user = new Users();
             user.setUsername(username);
             user.setEmail(email);
@@ -48,6 +63,24 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
         return user;
     }
 
+
+    public String login(String email, String password) throws UserNotFoundException, EmailNotFoundException {
+        Users user = findUserByEmail(email);
+
+        if (loginAttemptService.hasExceededMaxNumberOfAttempts(email)){
+            throw new RuntimeException("Sorry you have exceeded the maximum login attempts. Try again later!");
+        }
+        if (!bCryptPasswordEncoder.matches(password, user.getPassword())){
+            loginAttemptService.addUserToLoginAttemptCache(email);
+            throw new RuntimeException("Invalid Password. Please try again.");
+        }
+
+        Authentication auth = authenticationManager
+                .authenticate(new UsernamePasswordAuthenticationToken(email, password));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+        loginAttemptService.removeUserFromLoginAttemptCache(email);
+        return jwtTokenProvider.generateToken(auth);
+    }
 
 
     @Override
@@ -71,7 +104,7 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
     public Users updateProfileImage(String username, MultipartFile profileImage) throws NotValidImageException, UserNotFoundException {
 
         Users user = usersRepository.findUserByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException(username + "username doesn't exist. Please try again."));
+                .orElseThrow(() -> new UserNotFoundException(username + " username doesn't exist. Please try again."));
        if (!profileImage.isEmpty() && profileImage != null){
            if (!isAnImage(profileImage)){
                throw new NotValidImageException("This image format can't be saved. Please try another one.");
@@ -80,14 +113,22 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
            user.setProfileImageUrl(profileImageUrl);
            usersRepository.save(user);
        }
-
         return user;
     }
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return usersRepository.findUserByUsername(username)
-                .orElseThrow(()-> new UsernameNotFoundException("This username doesn't exist. Please try again!"));
+    public UserDetails loadUserByUsername(String email) {
+        try {
+            return usersRepository.findUserByEmail(email)
+                    .orElseThrow(()-> new EmailNotFoundException("This email doesn't exist. Please try again!"));
+        } catch (EmailNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Roles getRoleByName(String roleName){
+        return Optional.of(Roles.valueOf(roleName))
+                .orElseThrow(()-> new IllegalArgumentException("Invalid Role" + roleName));
     }
 
     private String getTemporaryProfileImageUrl() {

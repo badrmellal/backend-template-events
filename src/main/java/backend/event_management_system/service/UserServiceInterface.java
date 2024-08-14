@@ -9,7 +9,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface UserServiceInterface {
-    Users register(String username, String email, String password, Roles role) throws UsernameExistException, EmailExistException;
+    Users register(String username, String email, String password, String roleName) throws UsernameExistException, EmailExistException;
+    String login(String email, String password) throws UserNotFoundException, EmailNotFoundException;
     List<Users> getUsers();
     Users findUserByUsername(String username) throws UsernameNotFoundException;
     Users findUserByEmail(String email) throws EmailNotFoundException;

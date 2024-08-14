@@ -15,17 +15,16 @@ import java.io.IOException;
 @Service
 public class S3Service {
     private final S3Client s3Client;
+    private final String bucketName;
 
-    @Value("${aws.s3.bucket}")
-    private String bucketName;
-    @Value("${aws.s3.region}")
-    private String bucketRegion;
-    @Value("${aws.accessKeyId}")
-    private String accessKeyId;
-    @Value("${aws.secretKey}")
-    private String accessSecretKey;
 
-    public S3Service(){
+    public S3Service(@Value("${aws.accessKeyId}") String accessKeyId,
+                     @Value("${aws.secretKey}") String accessSecretKey,
+                     @Value("${aws.s3.region}") String bucketRegion,
+                     @Value("${aws.s3.bucket}") String bucketName){
+
+        this.bucketName = bucketName;
+
         AwsBasicCredentials awsBasicCredentials = AwsBasicCredentials.create(accessKeyId, accessSecretKey);
             this.s3Client = S3Client.builder()
                     .region(Region.of(bucketRegion))
