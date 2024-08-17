@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class LoginAttemptService {
-    private static final int MAX_ATTEMPTS = 10;
+    private static final int MAX_ATTEMPTS = 5;
     private static final int INCREMENTS_BY = 1;
     private LoadingCache<String, Integer> loginAttemptCache;
 

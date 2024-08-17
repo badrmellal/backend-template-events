@@ -3,6 +3,7 @@ package backend.event_management_system.service;
 import backend.event_management_system.exceptions.*;
 import backend.event_management_system.models.Roles;
 import backend.event_management_system.models.Users;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,5 +16,6 @@ public interface UserServiceInterface {
     Users findUserByUsername(String username) throws UsernameNotFoundException;
     Users findUserByEmail(String email) throws EmailNotFoundException;
     Users updateProfileImage(String username, MultipartFile profileImage) throws NotValidImageException, UserNotFoundException;
+    UserDetails loadUserByUsername(String email) throws UsernameNotFoundException;
 
 }

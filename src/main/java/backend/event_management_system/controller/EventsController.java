@@ -11,7 +11,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class EventsController {
 
     @GetMapping(path = {"/home"})
-    public String homePageDemo(){
+    public String homePageDemo() {
         return "This is a demo page used for testing, later we'll build it as soon as tickets are available for purchase.";
+    }
+
+
+    @GetMapping(path = {"/authenticated-basic-user"})
+    public String basicUserLoggedIn() {
+        return "This text is from the backend, and later it will be a beautiful list of events. cheers !";
     }
 }
