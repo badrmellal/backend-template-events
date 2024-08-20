@@ -6,11 +6,15 @@ import com.auth0.jwt.algorithms.Algorithm;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.List;
 import java.util.stream.Collectors;
+
+import static java.util.Arrays.stream;
 
 @Component
 public class JwtTokenProvider {
@@ -57,6 +61,17 @@ public class JwtTokenProvider {
                 .verify(token)
                 .getExpiresAt()
                 .before(new Date());
+    }
+
+    public List<GrantedAuthority> listOfAuthoritiesGrantedToAuthenticatedUser(String token){
+        String roles = JWT.require(Algorithm.HMAC256(jwtSecret.getBytes()))
+                .build()
+                .verify(token)
+                .getClaim("roles").asString();
+
+        return stream(roles.split(","))
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
     }
 
 }

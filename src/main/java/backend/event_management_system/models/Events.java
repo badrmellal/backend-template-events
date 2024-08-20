@@ -1,18 +1,19 @@
 package backend.event_management_system.models;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-
+import jakarta.persistence.*;
+import lombok.NoArgsConstructor;
 import java.util.Date;
-
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Entity
+@NoArgsConstructor
 public class Events {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private String eventCategory;
     private String eventName;
     private String eventDescription;
     private String eventImage;
@@ -22,10 +23,17 @@ public class Events {
     private Date eventDate;
     private String addressLocation;
     private String googleMapsUrl;
+    private boolean isApproved;
+
+    private int totalTickets;
+    private int remainingTickets;
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "event", orphanRemoval = true)
+    private Set<Tickets> tickets = new HashSet<>();
 
 
-    public Events(Long id, String eventName, String eventDescription, String eventImage, String eventVideo, float eventPrice, String eventManagerUsername, Date eventDate, String addressLocation, String googleMapsUrl) {
+    public Events(Long id, String eventCategory, String eventName, boolean isApproved, String eventDescription, String eventImage, String eventVideo, float eventPrice, String eventManagerUsername, Date eventDate, String addressLocation, String googleMapsUrl, boolean approved, int totalTickets, int remainingTickets, Set<Tickets> tickets) {
         this.id = id;
+        this.eventCategory = eventCategory;
         this.eventName = eventName;
         this.eventDescription = eventDescription;
         this.eventImage = eventImage;
@@ -35,6 +43,10 @@ public class Events {
         this.eventDate = eventDate;
         this.addressLocation = addressLocation;
         this.googleMapsUrl = googleMapsUrl;
+        this.isApproved = false;
+        this.totalTickets = totalTickets;
+        this.remainingTickets = remainingTickets;
+        this.tickets = tickets;
     }
 
 
@@ -44,6 +56,14 @@ public class Events {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getEventCategory() {
+        return eventCategory;
+    }
+
+    public void setEventCategory(String eventCategory) {
+        this.eventCategory = eventCategory;
     }
 
     public String getEventName() {
@@ -116,5 +136,50 @@ public class Events {
 
     public void setGoogleMapsUrl(String googleMapsUrl) {
         this.googleMapsUrl = googleMapsUrl;
+    }
+
+    public boolean isApproved() {
+        return isApproved;
+    }
+
+    public void setApproved(boolean approved) {
+        isApproved = approved;
+    }
+
+    public Set<Tickets> getTickets() {
+        return tickets;
+    }
+
+    public void setTickets(Set<Tickets> tickets) {
+        this.tickets = tickets;
+    }
+
+    public int getTotalTickets() {
+        return totalTickets;
+    }
+
+    public void setTotalTickets(int totalTickets) {
+        this.totalTickets = totalTickets;
+        this.remainingTickets = totalTickets;  // Initialize remaining tickets to total tickets
+    }
+
+    public int getRemainingTickets() {
+        return remainingTickets;
+    }
+
+    public void setRemainingTickets(int remainingTickets) {
+        this.remainingTickets = remainingTickets;
+    }
+
+    //custom methods
+    public void addTicket(Tickets ticket) {
+        this.tickets.add(ticket);
+        ticket.setEvent(this);
+        this.remainingTickets -= ticket.getQuantity();
+    }
+    public void removeTicket(Tickets ticket) {
+        this.tickets.remove(ticket);
+        ticket.setEvent(null);
+        this.remainingTickets += ticket.getQuantity();
     }
 }
