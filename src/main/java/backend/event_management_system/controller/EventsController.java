@@ -6,13 +6,18 @@ import backend.event_management_system.models.Events;
 import backend.event_management_system.models.Users;
 import backend.event_management_system.service.EventsService;
 import backend.event_management_system.service.FilteredEvents;
+import backend.event_management_system.service.S3Service;
 import backend.event_management_system.service.UsersService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,11 +29,13 @@ public class EventsController {
     private final EventsService eventsService;
     private final UsersService usersService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final S3Service s3Service;
 
-    public EventsController(EventsService eventsService, UsersService usersService, JwtTokenProvider jwtTokenProvider) {
+    public EventsController(EventsService eventsService, UsersService usersService, JwtTokenProvider jwtTokenProvider, S3Service s3Service) {
         this.eventsService = eventsService;
         this.usersService = usersService;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.s3Service = s3Service;
     }
 
 
@@ -62,12 +69,41 @@ public class EventsController {
         return eventsService.checkEventAvailability(id);
     }
 
+
     @PostMapping("/create")
     @PreAuthorize("hasRole('ROLE_PUBLISHER') or hasRole('ROLE_ADMIN')")
-    public  Events createEvent(@RequestHeader("Authorization") String token, @RequestBody Events event) throws EmailNotFoundException {
+    public ResponseEntity<Events> createEvent(@RequestHeader("Authorization") String token,
+                                              @RequestParam("eventName") String eventName,
+                                              @RequestParam("eventCategory") String eventCategory,
+                                              @RequestParam("eventDescription") String eventDescription,
+                                              @RequestParam("eventPrice") float eventPrice,
+                                              @RequestParam("eventDate") String eventDate,
+                                              @RequestParam("addressLocation") String addressLocation,
+                                              @RequestParam("googleMapsUrl") String googleMapsUrl,
+                                              @RequestParam("totalTickets") int totalTickets,
+                                              @RequestParam("eventImage") MultipartFile eventImage,
+                                              @RequestParam(value = "eventVideo", required = false) MultipartFile eventVideo) throws ParseException {
+
         String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+
+        String imageUrl = s3Service.uploadEventFile(eventName, eventImage);
+        String videoUrl = eventVideo != null ? s3Service.uploadEventFile(eventName, eventVideo) : "";
+
+        Events event = new Events();
         event.setEventManagerUsername(email);
-        return eventsService.createEvent(event);
+        event.setEventName(eventName);
+        event.setEventCategory(eventCategory);
+        event.setEventDescription(eventDescription);
+        event.setEventImage(imageUrl);
+        event.setEventVideo(videoUrl);
+        event.setEventPrice(eventPrice);
+        event.setEventDate(new SimpleDateFormat("yyyy-MM-dd").parse(eventDate)); // to format the date
+        event.setAddressLocation(addressLocation);
+        event.setGoogleMapsUrl(googleMapsUrl);
+        event.setTotalTickets(totalTickets);
+        event.setRemainingTickets(totalTickets); // Initialize remaining tickets to total tickets
+
+        return ResponseEntity.ok(eventsService.createEvent(event));
     }
 
     @PutMapping("/{id}")

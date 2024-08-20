@@ -31,6 +31,9 @@ public class Events {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "event", orphanRemoval = true)
     private Set<Tickets> tickets = new HashSet<>();
 
+    public Events(){
+
+    }
 
     public Events(Long id, String eventCategory, String eventName, boolean isApproved, String eventDescription, String eventImage, String eventVideo, float eventPrice, String eventManagerUsername, Date eventDate, String addressLocation, String googleMapsUrl, int totalTickets, int remainingTickets, Set<Tickets> tickets) {
         this.id = id;

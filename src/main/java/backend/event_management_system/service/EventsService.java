@@ -95,7 +95,7 @@ public class EventsService implements EventServiceInterface {
     @Override
     public List<Events> getEventsPendingApproval() {
         // This for publisher and purpose is to get all pending approval events
-        return eventsRepository.findByApprovedFalse();
+        return eventsRepository.findByIsApproved(false);
     }
 
     @Override

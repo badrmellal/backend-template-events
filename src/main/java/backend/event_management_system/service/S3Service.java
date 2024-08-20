@@ -33,7 +33,7 @@ public class S3Service {
     }
 
     public String uploadProfileImage(String username, MultipartFile file){
-        String key = "user-profile-images" + username + "_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
+        String key = "user-profile-images/" + username + "_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
         try {
             s3Client.putObject(PutObjectRequest.builder()
                     .bucket(bucketName)
@@ -41,9 +41,22 @@ public class S3Service {
                     .build(),
                     RequestBody.fromBytes(file.getBytes()));
             return s3Client.utilities().getUrl(builder -> builder.bucket(bucketName).key(key)).toString();
-
         } catch (IOException e) {
-            throw new RuntimeException("Error uploading image to s3" + e);
+            throw new RuntimeException("Error uploading image to s3" + e.getMessage(), e);
+        }
+    }
+
+    public String uploadEventFile(String eventName, MultipartFile file){
+        String key = "created-event/" + eventName + "_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
+        try {
+            s3Client.putObject(PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build(),
+                    RequestBody.fromBytes(file.getBytes()));
+            return s3Client.utilities().getUrl(builder -> builder.bucket(bucketName).key(key)).toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Error uploading file to s3" + e.getMessage(), e);
         }
     }
 

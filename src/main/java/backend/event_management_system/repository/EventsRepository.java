@@ -11,7 +11,6 @@ import java.util.List;
 public interface EventsRepository extends JpaRepository<Events, Long>, JpaSpecificationExecutor<Events> {
     List<Events> findByEventNameContainingIgnoreCaseOrEventDescriptionContainingIgnoreCase(String eventName, String eventDescription);
     List<Events> findByEventManagerUsername(String eventManagerUsername);
-    List<Events> findByApprovedFalse();
     List<Events> findByIsApproved(boolean isApproved);
 
 }
