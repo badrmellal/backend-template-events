@@ -24,14 +24,15 @@ public class Events {
     private String addressLocation;
     private String googleMapsUrl;
     private boolean isApproved;
-
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date eventCreationDate;
     private int totalTickets;
     private int remainingTickets;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "event", orphanRemoval = true)
     private Set<Tickets> tickets = new HashSet<>();
 
 
-    public Events(Long id, String eventCategory, String eventName, boolean isApproved, String eventDescription, String eventImage, String eventVideo, float eventPrice, String eventManagerUsername, Date eventDate, String addressLocation, String googleMapsUrl, boolean approved, int totalTickets, int remainingTickets, Set<Tickets> tickets) {
+    public Events(Long id, String eventCategory, String eventName, boolean isApproved, String eventDescription, String eventImage, String eventVideo, float eventPrice, String eventManagerUsername, Date eventDate, String addressLocation, String googleMapsUrl, int totalTickets, int remainingTickets, Set<Tickets> tickets) {
         this.id = id;
         this.eventCategory = eventCategory;
         this.eventName = eventName;
@@ -47,6 +48,14 @@ public class Events {
         this.totalTickets = totalTickets;
         this.remainingTickets = remainingTickets;
         this.tickets = tickets;
+    }
+
+    @PrePersist
+    protected void onCreate(){
+        this.eventCreationDate = new Date();
+    }
+    public Date getEventCreationDate() {
+        return eventCreationDate;
     }
 
 

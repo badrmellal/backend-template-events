@@ -1,6 +1,7 @@
 package backend.event_management_system.controller;
 
 import backend.event_management_system.exceptions.EmailNotFoundException;
+import backend.event_management_system.jwt.JwtTokenProvider;
 import backend.event_management_system.models.Events;
 import backend.event_management_system.models.Tickets;
 import backend.event_management_system.models.Users;
@@ -8,49 +9,98 @@ import backend.event_management_system.repository.TicketsRepository;
 import backend.event_management_system.service.EventsService;
 import backend.event_management_system.service.TicketsService;
 import backend.event_management_system.service.UsersService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping(path = {"/tickets"})
 @CrossOrigin(origins = {"http://localhost:3000"})
 public class TicketsController {
 
-    private final TicketsRepository ticketsRepository;
     private final TicketsService ticketsService;
     private final EventsService eventsService;
     private final UsersService usersService;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public TicketsController(TicketsRepository ticketsRepository, TicketsService ticketsService, EventsService eventsService, UsersService usersService) {
-        this.ticketsRepository = ticketsRepository;
+    @Autowired
+    public TicketsController(TicketsService ticketsService, EventsService eventsService, UsersService usersService, JwtTokenProvider jwtTokenProvider) {
         this.ticketsService = ticketsService;
         this.eventsService = eventsService;
         this.usersService = usersService;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @PostMapping("/purchase/{eventId}")
     @PreAuthorize("hasRole('ROLE_BASIC_USER')")
-    public Tickets purchaseTicket(@PathVariable Long eventId, @RequestParam int quantity, @RequestParam String ticketType) throws EmailNotFoundException {
-        Users user = getCurrentUser();
-        Events event = eventsService.getEventById(eventId).orElseThrow(() -> new RuntimeException("Event not found."));
-        return ticketsService.purchaseTicket(user, event, ticketType, quantity);
+    public ResponseEntity<Tickets> purchaseTicket(@RequestHeader("Authorization") String token, @PathVariable Long eventId, @RequestParam int quantity, @RequestParam String ticketType)
+            throws EmailNotFoundException {
+        String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+        Users user = usersService.findUserByEmail(email);
+        Events event = eventsService.getEventById(eventId);
+        if (!event.isApproved()){
+            return ResponseEntity.badRequest().body(null);
+        }
+        Tickets ticket = ticketsService.purchaseTicket(user, event, ticketType, quantity);
+
+        return ResponseEntity.ok(ticket);
     }
 
+    @GetMapping("/user")
+    @PreAuthorize("hasRole('ROLE_BASIC_USER')")
+    public ResponseEntity<List<Tickets>> getUserTickets(@RequestHeader("Authorization") String token) throws EmailNotFoundException {
+        String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+        Users user = usersService.findUserByEmail(email);
+        List<Tickets> userTickets = ticketsService.getTicketsByUser(user);
+        return ResponseEntity.ok(userTickets);
+    }
 
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public List<Tickets> getAllTickets(){
+        return ticketsService.getAllTickets();
+    }
 
+    @GetMapping("/event/{eventId}")
+    @PreAuthorize("hasRole('ROLE_PUBLISHER')")
+    public ResponseEntity<List<Tickets>> getEventTickets(@RequestHeader("Authorization") String token, @PathVariable Long eventId) throws EmailNotFoundException {
+        String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+        Users user = usersService.findUserByEmail(email);
+        Events event = eventsService.getEventById(eventId);
 
-    private Users getCurrentUser() throws EmailNotFoundException {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserDetails){
-            String email = ((UserDetails) principal).getUsername();
-            return usersService.findUserByEmail(email);
+        if (!user.getEmail().equals(event.getEventManagerUsername())){
+            return ResponseEntity.status(403).build();
         } else {
-            throw new RuntimeException("User with this email not found.");
+            List<Tickets> eventTickets = ticketsService.getTicketsByEvent(event);
+            return ResponseEntity.ok(eventTickets);
         }
     }
+
+    @GetMapping("/available/{eventId}")
+    public int totalTicketsAvailableForEvent(@PathVariable Long eventId){
+        Events event = eventsService.getEventById(eventId);
+        return ticketsService.countTicketsAvailableForEvent(event);
+    }
+
+    @GetMapping("/sold/{eventId}")
+    public int totalTicketsSoldForEvent(@PathVariable Long eventId){
+        Events event = eventsService.getEventById(eventId);
+        return ticketsService.countTicketsSoldForEvent(event);
+    }
+
+    @DeleteMapping("/{ticketId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Tickets> deleteTicket(@PathVariable Long ticketId){
+        ticketsService.deleteTicket(ticketId);
+        return ResponseEntity.noContent().build();
+    }
+
 
 }

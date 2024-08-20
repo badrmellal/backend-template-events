@@ -7,17 +7,21 @@ import backend.event_management_system.repository.EventsRepository;
 import backend.event_management_system.repository.TicketsRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
 
+@Service
 public class TicketsService implements TicketServiceInterface {
 
-    @Autowired
-    private TicketsRepository ticketsRepository;
+    private final TicketsRepository ticketsRepository;
+    private final EventsRepository eventsRepository;
 
-    @Autowired
-    private EventsRepository eventsRepository;
+    public TicketsService(TicketsRepository ticketsRepository, EventsRepository eventsRepository) {
+        this.ticketsRepository = ticketsRepository;
+        this.eventsRepository = eventsRepository;
+    }
 
     @Override
     @Transactional

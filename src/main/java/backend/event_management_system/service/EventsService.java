@@ -13,9 +13,9 @@ import java.util.Optional;
 @Service
 public class EventsService implements EventServiceInterface {
 
-    @Autowired
     private final EventsRepository eventsRepository;
 
+    @Autowired
     public EventsService(EventsRepository eventsRepository) {
         this.eventsRepository = eventsRepository;
     }
@@ -43,9 +43,10 @@ public class EventsService implements EventServiceInterface {
     }
 
     @Override
-    public Optional<Events> getEventById(Long id) {
-        return eventsRepository.findById(id);
+    public Events getEventById(Long id) {
+        return eventsRepository.findById(id).orElse(null);
     }
+
 
     @Override
     public List<Events> getEventsByUsername(String publisherUsername) {

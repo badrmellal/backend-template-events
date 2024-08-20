@@ -9,7 +9,7 @@ public interface EventServiceInterface {
     List<Events> getAllEvents(Optional<FilteredEvents> filteredEvents);
     List<Events> getApprovedEvents(Optional<FilteredEvents> filteredEvents);
     List<Events> getEventBySearch(String SearchKeyword);
-    Optional<Events> getEventById(Long id);
+    Events getEventById(Long id);
     List<Events> getEventsByUsername(String PublisherUsername);
     boolean checkEventAvailability(Long eventId);
 

@@ -1,6 +1,7 @@
 package backend.event_management_system.controller;
 
 import backend.event_management_system.exceptions.EmailNotFoundException;
+import backend.event_management_system.jwt.JwtTokenProvider;
 import backend.event_management_system.models.Events;
 import backend.event_management_system.models.Users;
 import backend.event_management_system.service.EventsService;
@@ -22,16 +23,14 @@ public class EventsController {
 
     private final EventsService eventsService;
     private final UsersService usersService;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public EventsController(EventsService eventsService, UsersService usersService) {
+    public EventsController(EventsService eventsService, UsersService usersService, JwtTokenProvider jwtTokenProvider) {
         this.eventsService = eventsService;
         this.usersService = usersService;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
-    @GetMapping(path = {"/home"})
-    public String homePageDemo() {
-        return "This is a demo page used for testing, later we'll build it as soon as tickets are available for purchase.";
-    }
 
     @GetMapping(path = {"/authenticated-basic-user"})
     public String basicUserLoggedIn() {
@@ -39,7 +38,7 @@ public class EventsController {
     }
 
     @GetMapping(path = {"/home"})
-    public List<Events> getApprovedEvents(@RequestParam Optional< FilteredEvents > filteredEvents) {
+    public List<Events> getApprovedEvents(@RequestParam Optional<FilteredEvents> filteredEvents) {
         return eventsService.getApprovedEvents(filteredEvents);
     }
 
@@ -49,7 +48,7 @@ public class EventsController {
     }
 
     @GetMapping("/{id}")
-    public Optional<Events> getEventById(@PathVariable Long id){
+    public Events getEventById(@PathVariable Long id){
         return eventsService.getEventById(id);
     }
 
@@ -65,7 +64,9 @@ public class EventsController {
 
     @PostMapping("/create")
     @PreAuthorize("hasRole('ROLE_PUBLISHER') or hasRole('ROLE_ADMIN')")
-    public  Events createEvent(@RequestBody Events event){
+    public  Events createEvent(@RequestHeader("Authorization") String token, @RequestBody Events event) throws EmailNotFoundException {
+        String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+        event.setEventManagerUsername(email);
         return eventsService.createEvent(event);
     }
 
