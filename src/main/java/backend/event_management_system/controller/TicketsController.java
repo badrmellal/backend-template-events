@@ -39,7 +39,7 @@ public class TicketsController {
     }
 
     @PostMapping("/purchase/{eventId}")
-    @PreAuthorize("hasRole('ROLE_BASIC_USER')")
+    @PreAuthorize("hasAuthority('event:read')")
     public ResponseEntity<Tickets> purchaseTicket(@RequestHeader("Authorization") String token, @PathVariable Long eventId, @RequestParam int quantity, @RequestParam String ticketType)
             throws EmailNotFoundException {
         String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
@@ -54,7 +54,7 @@ public class TicketsController {
     }
 
     @GetMapping("/user")
-    @PreAuthorize("hasRole('ROLE_BASIC_USER')")
+    @PreAuthorize("hasAuthority('event:read')")
     public ResponseEntity<List<Tickets>> getUserTickets(@RequestHeader("Authorization") String token) throws EmailNotFoundException {
         String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
         Users user = usersService.findUserByEmail(email);
@@ -63,13 +63,13 @@ public class TicketsController {
     }
 
     @GetMapping("/all")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('event:approve')")
     public List<Tickets> getAllTickets(){
         return ticketsService.getAllTickets();
     }
 
     @GetMapping("/event/{eventId}")
-    @PreAuthorize("hasRole('ROLE_PUBLISHER')")
+    @PreAuthorize("hasAuthority('event:create')")
     public ResponseEntity<List<Tickets>> getEventTickets(@RequestHeader("Authorization") String token, @PathVariable Long eventId) throws EmailNotFoundException {
         String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
         Users user = usersService.findUserByEmail(email);
@@ -96,7 +96,7 @@ public class TicketsController {
     }
 
     @DeleteMapping("/{ticketId}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('event:approve')")
     public ResponseEntity<Tickets> deleteTicket(@PathVariable Long ticketId){
         ticketsService.deleteTicket(ticketId);
         return ResponseEntity.noContent().build();

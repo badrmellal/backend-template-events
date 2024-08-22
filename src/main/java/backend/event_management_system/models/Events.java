@@ -2,13 +2,14 @@ package backend.event_management_system.models;
 
 import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 @Entity
-@NoArgsConstructor
 public class Events {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,9 +32,9 @@ public class Events {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "event", orphanRemoval = true)
     private Set<Tickets> tickets = new HashSet<>();
 
-    public Events(){
-
+    public Events() {
     }
+
 
     public Events(Long id, String eventCategory, String eventName, boolean isApproved, String eventDescription, String eventImage, String eventVideo, float eventPrice, String eventManagerUsername, Date eventDate, String addressLocation, String googleMapsUrl, int totalTickets, int remainingTickets, Set<Tickets> tickets) {
         this.id = id;

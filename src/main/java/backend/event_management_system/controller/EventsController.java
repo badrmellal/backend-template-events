@@ -71,7 +71,7 @@ public class EventsController {
 
 
     @PostMapping("/create")
-    @PreAuthorize("hasRole('ROLE_PUBLISHER') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('event:create')")
     public ResponseEntity<Events> createEvent(@RequestHeader("Authorization") String token,
                                               @RequestParam("eventName") String eventName,
                                               @RequestParam("eventCategory") String eventCategory,
@@ -90,6 +90,7 @@ public class EventsController {
         String videoUrl = eventVideo != null ? s3Service.uploadEventFile(eventName, eventVideo) : "";
 
         Events event = new Events();
+
         event.setEventManagerUsername(email);
         event.setEventName(eventName);
         event.setEventCategory(eventCategory);
@@ -107,31 +108,31 @@ public class EventsController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_PUBLISHER') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('event:update')")
     public Events updateEvent(@PathVariable Long id, @RequestBody Events event){
         return eventsService.updateEvent(id, event);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_PUBLISHER') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('event:delete')")
     public void deleteEvent(@PathVariable Long id){
          eventsService.deleteEvent(id);
     }
 
     @GetMapping("/pending")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('event:create')")
     public List<Events> getEventsPendingApproval(){
         return eventsService.getEventsPendingApproval();
     }
 
     @PutMapping("/approve/{id}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('event:approve')")
     public Events approveEvent(@PathVariable Long id){
         return eventsService.approveEvents(id);
     }
 
     @PutMapping("/reject/{id}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('event:deny')")
     public Events rejectEvent(@PathVariable Long id){
         return eventsService.rejectEvents(id);
     }

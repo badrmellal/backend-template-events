@@ -26,7 +26,7 @@ public class JwtTokenProvider {
 
     public String generateToken(Authentication auth){
         Users userDetails = (Users) auth.getPrincipal();
-        String roles = userDetails.getAuthorities().stream()
+        String authorities = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
@@ -34,7 +34,7 @@ public class JwtTokenProvider {
                 .withSubject(userDetails.getEmail())
                 .withIssuedAt(new Date())
                 .withExpiresAt(new Date(new Date().getTime() + expirationMs))
-                .withClaim("roles", roles)
+                .withClaim("authorities", authorities)
                 .sign(Algorithm.HMAC256(jwtSecret.getBytes()));
     }
 
@@ -67,7 +67,7 @@ public class JwtTokenProvider {
         String roles = JWT.require(Algorithm.HMAC256(jwtSecret.getBytes()))
                 .build()
                 .verify(token)
-                .getClaim("roles").asString();
+                .getClaim("authorities").asString();
 
         return stream(roles.split(","))
                 .map(SimpleGrantedAuthority::new)
