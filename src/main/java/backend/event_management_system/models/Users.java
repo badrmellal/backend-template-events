@@ -1,5 +1,6 @@
 package backend.event_management_system.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
@@ -15,11 +16,11 @@ import static java.util.Arrays.stream;
 
 @Entity
 @NoArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Users implements Serializable, UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Long id;
     private String username;
     private String email;
@@ -73,6 +74,8 @@ public class Users implements Serializable, UserDetails {
 
     public void setRole(String role) {
         this.role = role;
+        // automatically update the authorities based on the role
+        this.authorities = getAuthoritiesForRole(role);
     }
 
     public void setAuthorities(String[] authorities) {
@@ -129,4 +132,18 @@ public class Users implements Serializable, UserDetails {
     public boolean isAccountNonLocked() {
         return UserDetails.super.isAccountNonLocked();
     }
+
+
+    private String[] getAuthoritiesForRole(String role) {
+        if (role.equals(Roles.ROLE_ADMIN.name())) {
+            return Roles.ROLE_ADMIN.getAuthorities();
+        } else if (role.equals(Roles.ROLE_PUBLISHER.name())) {
+            return Roles.ROLE_PUBLISHER.getAuthorities();
+        } else if (role.equals(Roles.ROLE_BASIC_USER.name())) {
+            return Roles.ROLE_BASIC_USER.getAuthorities();
+        } else {
+            throw new IllegalArgumentException("Invalid role: " + role);
+        }
+    }
+
 }

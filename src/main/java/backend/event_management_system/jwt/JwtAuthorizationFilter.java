@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -21,6 +22,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
@@ -43,9 +45,15 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             System.out.println("Extracted email from token: " + email);
             System.out.println("Loaded UserDetails: " + userDetails);
 
+//            if (userDetails != null && jwtTokenProvider.isTokenValid(token, userDetails)){
+//                List<GrantedAuthority> authorities = userDetails.getAuthorities().stream()
+//                        .map(grantedAuthority -> new SimpleGrantedAuthority(grantedAuthority.getAuthority()))
+//                        .collect(Collectors.toList());
+
             if (jwtTokenProvider.isTokenValid(token, userDetails)) {
                 System.out.println("Token is valid.");
                 List<GrantedAuthority> authorities = jwtTokenProvider.listOfAuthoritiesGrantedToAuthenticatedUser(token);
+
                 UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
                 authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);

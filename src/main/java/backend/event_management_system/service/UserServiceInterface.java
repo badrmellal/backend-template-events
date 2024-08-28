@@ -17,5 +17,6 @@ public interface UserServiceInterface {
     Users findUserByEmail(String email) throws EmailNotFoundException;
     Users updateProfileImage(String username, MultipartFile profileImage) throws NotValidImageException, UserNotFoundException;
     UserDetails loadUserByUsername(String email) throws UsernameNotFoundException;
-
+    Users updateUserRole(Long id, String role) throws EmailNotFoundException;
+    void deleteUser(Long id) throws UserNotFoundException;
 }

@@ -74,4 +74,23 @@ public class UsersController {
         return new ResponseEntity<>(usersList, HttpStatus.OK);
     }
 
+    @PutMapping(path = {"/update-role/{id}"})
+    @PreAuthorize("hasAuthority('user:delete')")
+    public ResponseEntity<Users> updateRole(@PathVariable Long id, @RequestParam String assignedRole) throws EmailNotFoundException {
+        try {
+            Users user = usersService.updateUserRole(id, assignedRole);
+            return new ResponseEntity<>(user, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);  // If the role is invalid
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);  // For any other exceptions
+        }
+    }
+
+    @DeleteMapping(path = {"/delete/{id}"})
+    @PreAuthorize("hasAuthority('user:delete')")
+    public void deleteUser(@PathVariable Long id) throws UserNotFoundException {
+        usersService.deleteUser(id);
+    }
+
 }

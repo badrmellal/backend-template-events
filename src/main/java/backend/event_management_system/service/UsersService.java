@@ -8,6 +8,7 @@ import backend.event_management_system.repository.UsersRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -123,6 +124,23 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
                     .orElseThrow(()-> new EmailNotFoundException("This email doesn't exist. Please try again!"));
         } catch (EmailNotFoundException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public Users updateUserRole(Long id, String assignedRole) throws EmailNotFoundException {
+         Users user = usersRepository.getReferenceById(id);
+         user.setRole(assignedRole);
+        usersRepository.save(user);
+        return user;
+    }
+
+    @Override
+    public void deleteUser(Long id) throws UserNotFoundException{
+        try{
+            usersRepository.deleteById(id);
+        } catch (EmptyResultDataAccessException exception){
+            throw new UserNotFoundException("Error with" + id + "not found." + exception);
         }
     }
 

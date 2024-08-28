@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 @Entity
-@NoArgsConstructor
 public class Tickets {
 
     @Id
@@ -28,6 +27,9 @@ public class Tickets {
     private int quantity;
     private boolean isTicketActive;
 
+    public Tickets(){
+
+    }
 
     public Tickets(Long id, Events event, Users user, LocalDate purchaseDate, String ticketType, float ticketPrice, int quantity, boolean isTicketActive) {
         this.id = id;
