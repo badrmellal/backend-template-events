@@ -59,9 +59,10 @@ public class EventsController {
         return eventsService.getEventById(id);
     }
 
-    @GetMapping("/publisher/{username}")
-    public List<Events> getEventsByUsername(@PathVariable String username){
-        return eventsService.getEventsByUsername(username);
+    @GetMapping("/publisher/{tokenEmail}")
+    @PreAuthorize("hasAuthority('event:create')")
+    public List<Events> getEventsByUsername(@PathVariable String tokenEmail){
+        return eventsService.getEventsByUsername(tokenEmail);
     }
 
     @GetMapping("/availability/{id}")

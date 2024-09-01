@@ -10,7 +10,7 @@ import java.util.List;
 @Repository
 public interface EventsRepository extends JpaRepository<Events, Long>, JpaSpecificationExecutor<Events> {
     List<Events> findByEventNameContainingIgnoreCaseOrEventDescriptionContainingIgnoreCase(String eventName, String eventDescription);
-    List<Events> findByEventManagerUsername(String eventManagerUsername);
+    List<Events> findByEventManagerUsername(String eventManagerEmail);
     List<Events> findByIsApproved(boolean isApproved);
 
 }

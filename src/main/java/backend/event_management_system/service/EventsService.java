@@ -4,9 +4,12 @@ import backend.event_management_system.constant.EventsSpecialFiltering;
 import backend.event_management_system.models.Events;
 import backend.event_management_system.repository.EventsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,10 +17,14 @@ import java.util.Optional;
 public class EventsService implements EventServiceInterface {
 
     private final EventsRepository eventsRepository;
+    private final S3Service s3Service;
+    private final String bucketName;
 
     @Autowired
-    public EventsService(EventsRepository eventsRepository) {
+    public EventsService(EventsRepository eventsRepository, S3Service s3Service, @Value("${aws.s3.bucket}") String bucketName) {
         this.eventsRepository = eventsRepository;
+        this.s3Service = s3Service;
+        this.bucketName = bucketName;
     }
 
     @Override
@@ -49,8 +56,14 @@ public class EventsService implements EventServiceInterface {
 
 
     @Override
-    public List<Events> getEventsByUsername(String publisherUsername) {
-        return eventsRepository.findByEventManagerUsername(publisherUsername);
+    public List<Events> getEventsByUsername(String publisherEmail) {
+        List<Events> events = eventsRepository.findByEventManagerUsername(publisherEmail);
+        for (Events event: events){
+            String objectKey = extractObjectKeyFromUrl(event.getEventImage());
+            String presignedUrl = s3Service.generatePresignedUrl(objectKey);
+            event.setEventImage(presignedUrl);
+        }
+        return events;
     }
 
     @Override
@@ -117,4 +130,29 @@ public class EventsService implements EventServiceInterface {
                 })
                 .orElseThrow(() -> new RuntimeException("Event not found"));
     }
+
+
+
+
+//    private String extractObjectKeyFromUrl(String url) {
+//        // This method assumes the URL format is: https://bucket-name.s3.region.amazonaws.com/object-key
+//        // Adjust this logic if your S3 URL format is different
+//        String[] parts = url.split(bucketName + "\\.");
+//        if (parts.length > 1) {
+//            return parts[1].substring(parts[1].indexOf("/") + 1);
+//        }
+//        throw new IllegalArgumentException("Invalid S3 URL format");
+//    }
+private String extractObjectKeyFromUrl(String url) {
+    try {
+        String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
+        String[] parts = decodedUrl.split(bucketName + "\\.");
+        if (parts.length > 1) {
+            return parts[1].substring(parts[1].indexOf("/") + 1);
+        }
+        throw new IllegalArgumentException("Invalid S3 URL format");
+    } catch (Exception e) {
+        throw new RuntimeException("Error decoding URL", e);
+    }
+}
 }
