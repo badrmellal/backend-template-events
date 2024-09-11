@@ -1,6 +1,7 @@
 package backend.event_management_system.service;
 
 import backend.event_management_system.models.Events;
+import backend.event_management_system.models.TicketId;
 import backend.event_management_system.models.Tickets;
 import backend.event_management_system.models.Users;
 
@@ -10,7 +11,7 @@ public interface TicketServiceInterface {
 
     List<Tickets> getTicketsByUser(Users user);
     Tickets purchaseTicket(Users user, Events event, String ticketType, int quantity, String paymentMethod, String promoCode);
-    Tickets confirmPayment(Long ticketId);
+    Tickets confirmPayment(TicketId ticketId);
     // other methods ...
     List<Tickets> getPendingTickets();
     List<Tickets> getCompletedTickets();
@@ -19,10 +20,10 @@ public interface TicketServiceInterface {
     List<Tickets> getTicketsByEvent(Events event);
     int countTicketsSoldForEvent(Events event);
     int countTicketsAvailableForEvent(Events event);
-    boolean checkTicketAvailability(Events event, int quantityRequested);
+    boolean checkTicketAvailability(Events event, String ticketTypeName, int quantityRequested);
 
     //for admins
     List<Tickets> getAllTickets();
     List<Tickets> getTicketsByUserAndEvent(Users user, Events event);
-    void deleteTicket(Long ticketId);
+    void deleteTicket(TicketId ticketId);
 }

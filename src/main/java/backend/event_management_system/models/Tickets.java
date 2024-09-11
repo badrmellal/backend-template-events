@@ -1,18 +1,16 @@
 package backend.event_management_system.models;
 
 import jakarta.persistence.*;
-import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 
 @Entity
 public class Tickets {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @EmbeddedId
+    private TicketId id;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @MapsId("eventId")
     @JoinColumn(name = "event_id", nullable = false)
     private Events event;
 
@@ -20,31 +18,33 @@ public class Tickets {
     @JoinColumn(name = "user_id", nullable = false)
     private Users user;
 
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "ticket_type_id", nullable = false)
+//    private EventTicketType ticketType;
+
     private LocalDateTime purchaseDate;
-    private String ticketType;
-    private float ticketPrice;
     private int quantity;
     private boolean isTicketActive;
     private float fees;
     private float vat;
     private float totalAmount;
     private String paymentMethod;
+
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;
+
     private String promoCodeUsed;
 
-    public Tickets(){
-
+    public Tickets() {
     }
-    public Tickets(Long id, Events event, Users user, LocalDateTime purchaseDate, String ticketType, float ticketPrice,
+
+    public Tickets(TicketId id, Events event, Users user, LocalDateTime purchaseDate,
                    int quantity, boolean isTicketActive, float fees, float vat, float totalAmount,
                    String paymentMethod, PaymentStatus paymentStatus, String promoCodeUsed) {
         this.id = id;
         this.event = event;
         this.user = user;
         this.purchaseDate = purchaseDate;
-        this.ticketType = ticketType;
-        this.ticketPrice = ticketPrice;
         this.quantity = quantity;
         this.isTicketActive = isTicketActive;
         this.fees = fees;
@@ -55,12 +55,14 @@ public class Tickets {
         this.promoCodeUsed = promoCodeUsed;
     }
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
+    public EventTicketType getTicketType() {
+        return event.getTicketTypeById(id.getTicketTypeId());
     }
 
-    public void setId(Long id) {
+    public TicketId getId(){
+        return id;
+    }
+    public void setId(TicketId id) {
         this.id = id;
     }
 
@@ -80,28 +82,13 @@ public class Tickets {
         this.user = user;
     }
 
+
     public LocalDateTime getPurchaseDate() {
         return purchaseDate;
     }
 
     public void setPurchaseDate(LocalDateTime purchaseDate) {
         this.purchaseDate = purchaseDate;
-    }
-
-    public String getTicketType() {
-        return ticketType;
-    }
-
-    public void setTicketType(String ticketType) {
-        this.ticketType = ticketType;
-    }
-
-    public float getTicketPrice() {
-        return ticketPrice;
-    }
-
-    public void setTicketPrice(float ticketPrice) {
-        this.ticketPrice = ticketPrice;
     }
 
     public int getQuantity() {

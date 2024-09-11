@@ -2,10 +2,7 @@ package backend.event_management_system.controller;
 
 import backend.event_management_system.exceptions.EmailNotFoundException;
 import backend.event_management_system.jwt.JwtTokenProvider;
-import backend.event_management_system.models.Events;
-import backend.event_management_system.models.Tickets;
-import backend.event_management_system.models.Users;
-import backend.event_management_system.models.PaymentStatus;
+import backend.event_management_system.models.*;
 import backend.event_management_system.service.EventsService;
 import backend.event_management_system.service.TicketsService;
 import backend.event_management_system.service.UsersService;
@@ -39,7 +36,7 @@ public class TicketsController {
     public ResponseEntity<Tickets> purchaseTicket(@RequestHeader("Authorization") String token,
                                                   @PathVariable Long eventId,
                                                   @RequestParam int quantity,
-                                                  @RequestParam String ticketType,
+                                                  @RequestParam String ticketTypeName,
                                                   @RequestParam String paymentMethod,
                                                   @RequestParam(required = false) String promoCode) throws EmailNotFoundException {
         String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
@@ -48,13 +45,16 @@ public class TicketsController {
         if (!event.isApproved()) {
             return ResponseEntity.badRequest().body(null);
         }
-        Tickets ticket = ticketsService.purchaseTicket(user, event, ticketType, quantity, paymentMethod, promoCode);
+        Tickets ticket = ticketsService.purchaseTicket(user, event, ticketTypeName, quantity, paymentMethod, promoCode);
         return ResponseEntity.ok(ticket);
     }
 
-    @PostMapping("/confirm-payment/{ticketId}")
+    @PostMapping("/confirm-payment")
     @PreAuthorize("hasAuthority('event:approve')")
-    public ResponseEntity<Tickets> confirmPayment(@PathVariable Long ticketId) {
+    public ResponseEntity<Tickets> confirmPayment(@RequestParam Long eventId,
+                                                  @RequestParam String ticketTypeId,
+                                                  @RequestParam String sequenceNumber) {
+        TicketId ticketId = new TicketId(eventId, ticketTypeId, sequenceNumber);
         Tickets confirmedTicket = ticketsService.confirmPayment(ticketId);
         return ResponseEntity.ok(confirmedTicket);
     }
@@ -67,6 +67,7 @@ public class TicketsController {
         List<Tickets> userTickets = ticketsService.getTicketsByUser(user);
         return ResponseEntity.ok(userTickets);
     }
+
 
     @GetMapping("/all")
     @PreAuthorize("hasAuthority('event:approve')")
@@ -102,9 +103,11 @@ public class TicketsController {
     }
 
     @GetMapping("/check-availability/{eventId}")
-    public ResponseEntity<Boolean> checkTicketAvailability(@PathVariable Long eventId, @RequestParam int quantity) {
+    public ResponseEntity<Boolean> checkTicketAvailability(@PathVariable Long eventId,
+                                                           @RequestParam String ticketTypeName,
+                                                           @RequestParam int quantity) {
         Events event = eventsService.getEventById(eventId);
-        boolean isAvailable = ticketsService.checkTicketAvailability(event, quantity);
+        boolean isAvailable = ticketsService.checkTicketAvailability(event, ticketTypeName, quantity);
         return ResponseEntity.ok(isAvailable);
     }
 
@@ -130,9 +133,12 @@ public class TicketsController {
         return ResponseEntity.ok(tickets);
     }
 
-    @DeleteMapping("/{ticketId}")
+    @DeleteMapping
     @PreAuthorize("hasAuthority('event:approve')")
-    public ResponseEntity<Void> deleteTicket(@PathVariable Long ticketId) {
+    public ResponseEntity<Void> deleteTicket(@RequestParam Long eventId,
+                                             @RequestParam String ticketTypeId,
+                                             @RequestParam String sequenceNumber) {
+        TicketId ticketId = new TicketId(eventId, ticketTypeId, sequenceNumber);
         ticketsService.deleteTicket(ticketId);
         return ResponseEntity.noContent().build();
     }

@@ -6,16 +6,23 @@ import jakarta.persistence.Embeddable;
 public class EventTicketType {
     private String name;
     private float price;
+    private String currency;
     private int totalTickets;
-    private int remainingTickets;
+    private int soldTickets;
+    private boolean isFree;
+
+    private String ticketTypeId;
 
     public EventTicketType() {}
 
-    public EventTicketType(String name, float price, int totalTickets) {
+    public EventTicketType(String name, String ticketTypeId, float price, String currency, int totalTickets, boolean isFree) {
         this.name = name;
         this.price = price;
+        this.currency = currency;
         this.totalTickets = totalTickets;
-        this.remainingTickets = totalTickets;
+        this.soldTickets = 0; // Initialize sold tickets to 0
+        this.isFree = isFree;
+        this.ticketTypeId = ticketTypeId;
     }
 
     public String getName() {
@@ -34,6 +41,14 @@ public class EventTicketType {
         this.price = price;
     }
 
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
     public int getTotalTickets() {
         return totalTickets;
     }
@@ -42,11 +57,34 @@ public class EventTicketType {
         this.totalTickets = totalTickets;
     }
 
-    public int getRemainingTickets() {
-        return remainingTickets;
+    public int getSoldTickets() {
+        return soldTickets;
     }
 
-    public void setRemainingTickets(int remainingTickets) {
-        this.remainingTickets = remainingTickets;
+    public void setSoldTickets(int soldTickets) {
+        this.soldTickets = soldTickets;
+    }
+
+    public boolean isFree() {
+        return isFree;
+    }
+
+    public void setFree(boolean free) {
+        isFree = free;
+    }
+
+    public int getRemainingTickets() {
+        return totalTickets - soldTickets;
+    }
+
+
+
+
+    public String getTicketTypeId() {
+        return ticketTypeId;
+    }
+
+    public void setTicketTypeId(String ticketTypeId) {
+        this.ticketTypeId = ticketTypeId;
     }
 }

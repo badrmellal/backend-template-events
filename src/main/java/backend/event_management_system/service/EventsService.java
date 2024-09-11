@@ -107,7 +107,6 @@ public class EventsService implements EventServiceInterface {
                     if (updatedEvent.getEventVideo() != null) {
                         event.setEventVideo(updatedEvent.getEventVideo());
                     }
-                    event.setEventPrice(updatedEvent.getEventPrice());
                     event.setEventDate(updatedEvent.getEventDate());
                     event.setApproved(false);
                     event.setAddressLocation(updatedEvent.getAddressLocation());

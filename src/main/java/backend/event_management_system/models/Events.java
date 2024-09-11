@@ -21,7 +21,6 @@ public class Events {
     @Column(name = "image_url")
     private List<String> eventImages = new ArrayList<>();
     private String eventVideo;
-    private float eventPrice;
     private String eventCurrency;
     private boolean isFreeEvent;
     private String eventManagerUsername;
@@ -44,7 +43,7 @@ public class Events {
     }
 
 
-    public Events(Long id, String eventCategory, String eventName, String eventCurrency, boolean isApproved, String eventDescription, boolean isFreeEvent, List<String> eventImages, String eventVideo, float eventPrice, String eventManagerUsername , LocalDateTime eventDate, String addressLocation, String googleMapsUrl, int totalTickets, int remainingTickets, Set<Tickets> tickets) {
+    public Events(Long id, String eventCategory, String eventName, String eventCurrency, boolean isApproved, String eventDescription, boolean isFreeEvent, List<String> eventImages, String eventVideo, String eventManagerUsername , LocalDateTime eventDate, String addressLocation, String googleMapsUrl, int totalTickets, int remainingTickets, Set<Tickets> tickets) {
         this.id = id;
         this.eventCategory = eventCategory;
         this.eventName = eventName;
@@ -52,7 +51,6 @@ public class Events {
         this.eventImages = eventImages;
         this.eventVideo = eventVideo;
         this.isFreeEvent = isFreeEvent;
-        this.eventPrice = eventPrice;
         this.eventCurrency = eventCurrency;
         this.eventManagerUsername = eventManagerUsername;
         this.eventDate = eventDate;
@@ -64,6 +62,12 @@ public class Events {
         this.tickets = tickets;
     }
 
+    public EventTicketType getTicketTypeById(String ticketTypeId) {
+        return ticketTypes.stream()
+                .filter(tt -> tt.getTicketTypeId().equals(ticketTypeId))
+                .findFirst()
+                .orElse(null);
+    }
 
 
     public Long getId() {
@@ -139,13 +143,6 @@ public class Events {
         this.eventVideo = eventVideo;
     }
 
-    public float getEventPrice() {
-        return eventPrice;
-    }
-
-    public void setEventPrice(float eventPrice) {
-        this.eventPrice = eventPrice;
-    }
 
     public String getEventManagerUsername() {
         return eventManagerUsername;

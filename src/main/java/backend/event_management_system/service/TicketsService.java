@@ -1,9 +1,7 @@
 package backend.event_management_system.service;
 
-import backend.event_management_system.models.Events;
-import backend.event_management_system.models.PaymentStatus;
-import backend.event_management_system.models.Tickets;
-import backend.event_management_system.models.Users;
+import backend.event_management_system.constant.TicketSequenceGenerator;
+import backend.event_management_system.models.*;
 import backend.event_management_system.repository.EventsRepository;
 import backend.event_management_system.repository.TicketsRepository;
 import jakarta.transaction.Transactional;
@@ -13,6 +11,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static backend.event_management_system.constant.TicketSequenceGenerator.generateSequenceNumber;
 
 @Service
 public class TicketsService implements TicketServiceInterface {
@@ -27,27 +27,32 @@ public class TicketsService implements TicketServiceInterface {
 
     @Override
     @Transactional
-    public Tickets purchaseTicket(Users user, Events event, String ticketType, int quantity, String paymentMethod, String promoCode) {
-        if (event.getRemainingTickets() < quantity) {
-            throw new RuntimeException("Not enough tickets available for this event.");
+    public Tickets purchaseTicket(Users user, Events event, String ticketTypeName, int quantity, String paymentMethod, String promoCode) {
+        EventTicketType ticketType = event.getTicketTypes().stream()
+                .filter(tt -> tt.getName().equals(ticketTypeName))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Ticket type not found for this event."));
+
+        if (ticketType.getRemainingTickets() < quantity) {
+            throw new RuntimeException("Not enough tickets available for this ticket type.");
         }
 
-        float ticketPrice = event.getEventPrice();
+        float ticketPrice = ticketType.getPrice();
         float subtotal = ticketPrice * quantity;
-        float fees = calculateFees(subtotal); // Implement this method based on your fee structure
-        float vat = calculateVAT(subtotal + fees); // Implement this method based on your VAT rate
+        float fees = calculateFees(subtotal);
+        float vat = calculateVAT(subtotal + fees);
         float totalAmount = subtotal + fees + vat;
 
-        //  promo code if provided
         if (promoCode != null && !promoCode.isEmpty()) {
             totalAmount = applyPromoCode(totalAmount, promoCode);
         }
 
+        String sequenceNumber = TicketSequenceGenerator.generateSequenceNumber();
+        TicketId ticketId = new TicketId(event.getId(), ticketType.getTicketTypeId(), sequenceNumber);
         Tickets ticket = new Tickets();
-        ticket.setUser(user);
+        ticket.setId(ticketId);
         ticket.setEvent(event);
-        ticket.setTicketType(ticketType);
-        ticket.setTicketPrice(ticketPrice);
+        ticket.setUser(user);
         ticket.setQuantity(quantity);
         ticket.setPurchaseDate(LocalDateTime.now());
         ticket.setTicketActive(true);
@@ -58,15 +63,15 @@ public class TicketsService implements TicketServiceInterface {
         ticket.setPaymentStatus(PaymentStatus.PENDING);
         ticket.setPromoCodeUsed(promoCode);
 
-        // Update event's remaining tickets
-        event.addTicket(ticket);
+        // Update ticket type's sold tickets
+        ticketType.setSoldTickets(ticketType.getSoldTickets() + quantity);
 
         // Save the ticket
         return ticketsRepository.save(ticket);
     }
 
     @Transactional
-    public Tickets confirmPayment(Long ticketId) {
+    public Tickets confirmPayment(TicketId ticketId) {
         Tickets ticket = ticketsRepository.findById(ticketId)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
 
@@ -93,10 +98,8 @@ public class TicketsService implements TicketServiceInterface {
         return totalAmount;
     }
 
-
-
     @Override
-    public void deleteTicket(Long ticketId) {
+    public void deleteTicket(TicketId ticketId) {
         Tickets ticket = ticketsRepository.findById(ticketId)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
 
@@ -104,12 +107,12 @@ public class TicketsService implements TicketServiceInterface {
             throw new RuntimeException("Cannot delete a ticket with completed payment");
         }
 
-        Events event = ticket.getEvent();
-        event.removeTicket(ticket);
+        EventTicketType ticketType = ticket.getTicketType();
+        ticketType.setSoldTickets(ticketType.getSoldTickets() - ticket.getQuantity());
+
         ticketsRepository.delete(ticket);
     }
 
-    // You might want to add more methods here, such as:
     public List<Tickets> getPendingTickets() {
         return ticketsRepository.findByPaymentStatus(PaymentStatus.PENDING);
     }
@@ -130,7 +133,9 @@ public class TicketsService implements TicketServiceInterface {
 
     @Override
     public int countTicketsSoldForEvent(Events event) {
-        return ticketsRepository.countByEvent(event);
+        return event.getTicketTypes().stream()
+                .mapToInt(EventTicketType::getSoldTickets)
+                .sum();
     }
 
     @Override
@@ -139,8 +144,12 @@ public class TicketsService implements TicketServiceInterface {
     }
 
     @Override
-    public boolean checkTicketAvailability(Events event, int quantityRequested) {
-        return event.getRemainingTickets() >= quantityRequested;
+    public boolean checkTicketAvailability(Events event, String ticketTypeName, int quantityRequested) {
+        return event.getTicketTypes().stream()
+                .filter(tt -> tt.getName().equals(ticketTypeName))
+                .findFirst()
+                .map(tt -> tt.getTotalTickets() - tt.getSoldTickets() >= quantityRequested)
+                .orElse(false);
     }
 
     @Override
@@ -152,5 +161,6 @@ public class TicketsService implements TicketServiceInterface {
     public List<Tickets> getTicketsByUserAndEvent(Users user, Events event) {
         return ticketsRepository.findByUserAndEvent(user, event);
     }
+
 
 }

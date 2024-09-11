@@ -92,12 +92,10 @@ public class EventsController {
                                               @RequestParam("eventCategory") String eventCategory,
                                               @RequestParam("eventDescription") String eventDescription,
                                               @RequestParam("isFreeEvent") boolean isFreeEvent,
-                                              @RequestParam("eventPrice") float eventPrice,
                                               @RequestParam("eventCurrency") String eventCurrency,
                                               @RequestParam("eventDate") String eventDate,
                                               @RequestParam("addressLocation") String addressLocation,
                                               @RequestParam("googleMapsUrl") String googleMapsUrl,
-                                              @RequestParam("totalTickets") int totalTickets,
                                               @RequestParam("ticketTypes") String ticketTypesJson,
                                               @RequestParam("eventImages") List<MultipartFile> eventImages,
                                               @RequestParam(value = "eventVideo", required = false) MultipartFile eventVideo) throws ParseException, JsonProcessingException {
@@ -126,14 +124,11 @@ public class EventsController {
         event.setEventDescription(eventDescription);
         event.setFreeEvent(isFreeEvent);
         event.setApproved(false);
-        event.setEventPrice(eventPrice);
         event.setEventCurrency(eventCurrency);
         event.setEventCreationDate(LocalDateTime.now());
         event.setEventDate(localDateTime);
         event.setAddressLocation(addressLocation);
         event.setGoogleMapsUrl(googleMapsUrl);
-        event.setTotalTickets(totalTickets);
-        event.setRemainingTickets(totalTickets); // Initialize remaining tickets to total tickets
 
         ObjectMapper objectMapper = new ObjectMapper();
         List<EventTicketType> ticketTypes = objectMapper.readValue(ticketTypesJson, new TypeReference<List<EventTicketType>>() {});
@@ -148,7 +143,6 @@ public class EventsController {
                                               @RequestParam("eventCategory") String eventCategory,
                                               @RequestParam("eventDescription") String eventDescription,
                                               @RequestParam("isFreeEvent") boolean isFreeEvent,
-                                              @RequestParam("eventPrice") float eventPrice,
                                               @RequestParam("eventCurrency") String eventCurrency,
                                               @RequestParam("eventDate") String eventDate,
                                               @RequestParam("addressLocation") String addressLocation,
@@ -168,7 +162,6 @@ public class EventsController {
         updatedEvent.setEventCategory(eventCategory);
         updatedEvent.setEventDescription(eventDescription);
         updatedEvent.setFreeEvent(isFreeEvent);
-        updatedEvent.setEventPrice(eventPrice);
         updatedEvent.setEventCurrency(eventCurrency);
         updatedEvent.setAddressLocation(addressLocation);
         updatedEvent.setGoogleMapsUrl(googleMapsUrl);
