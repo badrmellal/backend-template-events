@@ -28,21 +28,25 @@ import java.util.Optional;
 @Transactional
 public class UsersService implements UserServiceInterface, UserDetailsService {
 
-    private LoginAttemptService loginAttemptService;
-    private UsersRepository usersRepository;
-    private JwtTokenProvider jwtTokenProvider;
-    private BCryptPasswordEncoder bCryptPasswordEncoder;
-    private AuthenticationManager authenticationManager;
-    private S3Service s3Service;
+    private final LoginAttemptService loginAttemptService;
+    private final UsersRepository usersRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final S3Service s3Service;
+    private final EmailService emailService;
+    private final VerificationTokenService verificationTokenService;
 
     @Autowired
-    public UsersService(LoginAttemptService loginAttemptService, UsersRepository usersRepository, JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder bCryptPasswordEncoder, @Lazy AuthenticationManager authenticationManager, S3Service s3Service) {
+    public UsersService(LoginAttemptService loginAttemptService, UsersRepository usersRepository, JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder bCryptPasswordEncoder, @Lazy AuthenticationManager authenticationManager, S3Service s3Service, EmailService emailService, VerificationTokenService verificationTokenService) {
         this.loginAttemptService = loginAttemptService;
         this.usersRepository = usersRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.authenticationManager = authenticationManager;
         this.s3Service = s3Service;
+        this.emailService = emailService;
+        this.verificationTokenService = verificationTokenService;
     }
 
     @Override
@@ -59,14 +63,27 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
             user.setRole(role.name());
             user.setAuthorities(role.getAuthorities());
             user.setProfileImageUrl(getTemporaryProfileImageUrl());
+        user.setEnabled(false);
 
             usersRepository.save(user);
+
+        String token = verificationTokenService.generateVerificationToken();
+        verificationTokenService.createVerificationToken(user, token);
+
+        boolean emailSent = emailService.sendVerificationEmail(user.getEmail(), token);
+        if (!emailSent) {
+            System.out.println("Email failed to be sent to the user.");
+        }
         return user;
     }
 
     @Override
-    public String login(String email, String password) throws UserNotFoundException, EmailNotFoundException {
+    public String login(String email, String password) throws UserNotFoundException, EmailNotFoundException, EmailNotVerifiedException {
         Users user = findUserByEmail(email);
+
+        if (!user.isEnabled()) {
+            throw new EmailNotVerifiedException("Please verify your email before logging in.");
+        }
 
         if (loginAttemptService.hasExceededMaxNumberOfAttempts(email)){
             throw new RuntimeException("Sorry you have exceeded the maximum login attempts. Try again later!");
@@ -80,6 +97,7 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
                 .authenticate(new UsernamePasswordAuthenticationToken(email, password));
         SecurityContextHolder.getContext().setAuthentication(auth);
         loginAttemptService.removeUserFromLoginAttemptCache(email);
+
         return jwtTokenProvider.generateToken(auth);
     }
 
@@ -128,6 +146,18 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
     }
 
     @Override
+    public String getUsernameFromEmail(String email) throws UsernameNotFoundException{
+       try {
+           Optional<Users> user = usersRepository.findUserByEmail(email);
+           String username;
+           username = user.get().getUsername();
+           return username;
+       } catch (UsernameNotFoundException exception){
+           return "Username not found";
+       }
+    }
+
+    @Override
     public Users updateUserRole(Long id, String assignedRole) throws EmailNotFoundException {
          Users user = usersRepository.getReferenceById(id);
          user.setRole(assignedRole);
@@ -142,6 +172,12 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
         } catch (EmptyResultDataAccessException exception){
             throw new UserNotFoundException("Error with" + id + "not found." + exception);
         }
+    }
+
+    @Override
+    public Optional<Users> getPublisherInfoFromEmail(String userEmail) throws UsernameNotFoundException {
+        Optional<Users> user = usersRepository.findUserByEmail(userEmail);
+        return user;
     }
 
     private Roles getRoleByName(String roleName){

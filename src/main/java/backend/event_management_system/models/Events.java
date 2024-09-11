@@ -4,10 +4,9 @@ import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @Entity
 public class Events {
@@ -17,33 +16,44 @@ public class Events {
     private String eventCategory;
     private String eventName;
     private String eventDescription;
-    private String eventImage;
+    @ElementCollection
+    @CollectionTable(name = "event_images", joinColumns = @JoinColumn(name = "event_id"))
+    @Column(name = "image_url")
+    private List<String> eventImages = new ArrayList<>();
     private String eventVideo;
     private float eventPrice;
+    private String eventCurrency;
+    private boolean isFreeEvent;
     private String eventManagerUsername;
-    private Date eventDate;
+    private LocalDateTime eventDate;
     private String addressLocation;
     private String googleMapsUrl;
     private boolean isApproved;
     @Temporal(TemporalType.TIMESTAMP)
-    private Date eventCreationDate;
+    private LocalDateTime eventCreationDate;
+    @ElementCollection
+    @CollectionTable(name = "event_ticket_types", joinColumns = @JoinColumn(name = "event_id"))
+    private List<EventTicketType> ticketTypes = new ArrayList<>();
     private int totalTickets;
     private int remainingTickets;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "event", orphanRemoval = true)
     private Set<Tickets> tickets = new HashSet<>();
 
+
     public Events() {
     }
 
 
-    public Events(Long id, String eventCategory, String eventName, boolean isApproved, String eventDescription, String eventImage, String eventVideo, float eventPrice, String eventManagerUsername , Date eventDate, String addressLocation, String googleMapsUrl, int totalTickets, int remainingTickets, Set<Tickets> tickets) {
+    public Events(Long id, String eventCategory, String eventName, String eventCurrency, boolean isApproved, String eventDescription, boolean isFreeEvent, List<String> eventImages, String eventVideo, float eventPrice, String eventManagerUsername , LocalDateTime eventDate, String addressLocation, String googleMapsUrl, int totalTickets, int remainingTickets, Set<Tickets> tickets) {
         this.id = id;
         this.eventCategory = eventCategory;
         this.eventName = eventName;
         this.eventDescription = eventDescription;
-        this.eventImage = eventImage;
+        this.eventImages = eventImages;
         this.eventVideo = eventVideo;
+        this.isFreeEvent = isFreeEvent;
         this.eventPrice = eventPrice;
+        this.eventCurrency = eventCurrency;
         this.eventManagerUsername = eventManagerUsername;
         this.eventDate = eventDate;
         this.addressLocation = addressLocation;
@@ -54,13 +64,6 @@ public class Events {
         this.tickets = tickets;
     }
 
-    @PrePersist
-    protected void onCreate(){
-        this.eventCreationDate = new Date();
-    }
-    public Date getEventCreationDate() {
-        return eventCreationDate;
-    }
 
 
     public Long getId() {
@@ -91,16 +94,41 @@ public class Events {
         return eventDescription;
     }
 
+    public boolean isFreeEvent() {
+        return isFreeEvent;
+    }
+
+    public String getEventCurrency() {
+        return eventCurrency;
+    }
+
+    public void setEventCurrency(String eventCurrency) {
+        this.eventCurrency = eventCurrency;
+    }
+
+    public void setFreeEvent(boolean freeEvent) {
+        isFreeEvent = freeEvent;
+    }
+
+
     public void setEventDescription(String eventDescription) {
         this.eventDescription = eventDescription;
     }
 
-    public String getEventImage() {
-        return eventImage;
+
+    public List<String> getEventImages() {
+        return eventImages;
     }
 
-    public void setEventImage(String eventImage) {
-        this.eventImage = eventImage;
+    public void setEventImages(List<String> eventImages) {
+        this.eventImages = eventImages;
+    }
+
+    public void addEventImage(String imageUrl) {
+        if (this.eventImages == null) {
+            this.eventImages = new ArrayList<>();
+        }
+        this.eventImages.add(imageUrl);
     }
 
     public String getEventVideo() {
@@ -128,12 +156,20 @@ public class Events {
     }
 
 
-    public Date getEventDate() {
+    public LocalDateTime getEventDate() {
         return eventDate;
     }
 
-    public void setEventDate(Date eventDate) {
+    public void setEventDate(LocalDateTime eventDate) {
         this.eventDate = eventDate;
+    }
+
+    public LocalDateTime getEventCreationDate() {
+        return eventCreationDate;
+    }
+
+    public void setEventCreationDate(LocalDateTime eventCreationDate) {
+        this.eventCreationDate = eventCreationDate;
     }
 
     public String getAddressLocation() {
@@ -157,7 +193,7 @@ public class Events {
     }
 
     public void setApproved(boolean approved) {
-        isApproved = approved;
+        this.isApproved = approved;
     }
 
     public Set<Tickets> getTickets() {
@@ -196,4 +232,22 @@ public class Events {
         ticket.setEvent(null);
         this.remainingTickets += ticket.getQuantity();
     }
+
+
+    public List<EventTicketType> getTicketTypes() {
+        return ticketTypes;
+    }
+
+    public void setTicketTypes(List<EventTicketType> ticketTypes) {
+        this.ticketTypes = ticketTypes;
+    }
+
+    public void addTicketType(EventTicketType ticketType) {
+        this.ticketTypes.add(ticketType);
+    }
+
+    public void removeTicketType(EventTicketType ticketType) {
+        this.ticketTypes.remove(ticketType);
+    }
 }
+

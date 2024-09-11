@@ -1,10 +1,9 @@
 package backend.event_management_system.models;
 
-
 import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 public class Tickets {
@@ -15,23 +14,31 @@ public class Tickets {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
-    private  Events event;
+    private Events event;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private Users user;
 
-    private LocalDate purchaseDate;
+    private LocalDateTime purchaseDate;
     private String ticketType;
     private float ticketPrice;
     private int quantity;
     private boolean isTicketActive;
+    private float fees;
+    private float vat;
+    private float totalAmount;
+    private String paymentMethod;
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
+    private String promoCodeUsed;
 
     public Tickets(){
 
     }
-
-    public Tickets(Long id, Events event, Users user, LocalDate purchaseDate, String ticketType, float ticketPrice, int quantity, boolean isTicketActive) {
+    public Tickets(Long id, Events event, Users user, LocalDateTime purchaseDate, String ticketType, float ticketPrice,
+                   int quantity, boolean isTicketActive, float fees, float vat, float totalAmount,
+                   String paymentMethod, PaymentStatus paymentStatus, String promoCodeUsed) {
         this.id = id;
         this.event = event;
         this.user = user;
@@ -40,9 +47,15 @@ public class Tickets {
         this.ticketPrice = ticketPrice;
         this.quantity = quantity;
         this.isTicketActive = isTicketActive;
+        this.fees = fees;
+        this.vat = vat;
+        this.totalAmount = totalAmount;
+        this.paymentMethod = paymentMethod;
+        this.paymentStatus = paymentStatus;
+        this.promoCodeUsed = promoCodeUsed;
     }
 
-
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -67,11 +80,11 @@ public class Tickets {
         this.user = user;
     }
 
-    public LocalDate getPurchaseDate() {
+    public LocalDateTime getPurchaseDate() {
         return purchaseDate;
     }
 
-    public void setPurchaseDate(LocalDate purchaseDate) {
+    public void setPurchaseDate(LocalDateTime purchaseDate) {
         this.purchaseDate = purchaseDate;
     }
 
@@ -105,5 +118,53 @@ public class Tickets {
 
     public void setTicketActive(boolean ticketActive) {
         isTicketActive = ticketActive;
+    }
+
+    public float getFees() {
+        return fees;
+    }
+
+    public void setFees(float fees) {
+        this.fees = fees;
+    }
+
+    public float getVat() {
+        return vat;
+    }
+
+    public void setVat(float vat) {
+        this.vat = vat;
+    }
+
+    public float getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(float totalAmount) {
+        this.totalAmount = totalAmount;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public PaymentStatus getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(PaymentStatus paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public String getPromoCodeUsed() {
+        return promoCodeUsed;
+    }
+
+    public void setPromoCodeUsed(String promoCodeUsed) {
+        this.promoCodeUsed = promoCodeUsed;
     }
 }

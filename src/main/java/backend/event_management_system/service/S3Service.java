@@ -8,6 +8,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -15,7 +16,11 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.util.Date;
 
 @Service
 public class S3Service {
@@ -54,32 +59,48 @@ public class S3Service {
                 return presignedGetObjectRequest.url().toString();
     }
 
-    public String uploadProfileImage(String username, MultipartFile file){
-        String key = "user-profile-images/" + username + "_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
+    public String uploadProfileImage(String username, MultipartFile file) {
+        String key = "user-profile-images/" + generateUniqueFileName(username, file.getOriginalFilename());
+        return uploadFile(key, file);
+    }
+
+    public String uploadEventFile(String eventName, MultipartFile file) {
+        String key = "created-event/" + generateUniqueFileName(eventName, file.getOriginalFilename());
+        return uploadFile(key, file);
+    }
+
+    private String uploadFile(String key, MultipartFile file) {
         try {
             s3Client.putObject(PutObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(key)
-                    .build(),
+                            .bucket(bucketName)
+                            .key(key)
+                            .build(),
                     RequestBody.fromBytes(file.getBytes()));
             return s3Client.utilities().getUrl(builder -> builder.bucket(bucketName).key(key)).toString();
         } catch (IOException e) {
-            throw new RuntimeException("Error uploading image to s3" + e.getMessage(), e);
+            throw new RuntimeException("Error uploading file to s3: " + e.getMessage(), e);
         }
     }
 
-    public String uploadEventFile(String eventName, MultipartFile file){
-        String key = "created-event/" + eventName + "_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
+    public void deleteEventFile(String fileUrl){
         try {
-            s3Client.putObject(PutObjectRequest.builder()
+            URL url = new URL(fileUrl);
+            String key = url.getPath().substring(1);
+
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                     .bucket(bucketName)
                     .key(key)
-                    .build(),
-                    RequestBody.fromBytes(file.getBytes()));
-            return s3Client.utilities().getUrl(builder -> builder.bucket(bucketName).key(key)).toString();
-        } catch (IOException e) {
-            throw new RuntimeException("Error uploading file to s3" + e.getMessage(), e);
+                    .build();
+            s3Client.deleteObject(deleteObjectRequest);
+        } catch (MalformedURLException exception) {
+            throw new RuntimeException("Invalid file url: " + fileUrl, exception);
         }
+    }
+
+    private String generateUniqueFileName(String prefix, String originalFilename) {
+        String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+        String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        return prefix + "_" + timestamp + fileExtension;
     }
 
 }

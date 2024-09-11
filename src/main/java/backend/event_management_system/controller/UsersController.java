@@ -4,6 +4,7 @@ import backend.event_management_system.exceptions.*;
 import backend.event_management_system.models.Roles;
 import backend.event_management_system.models.Users;
 import backend.event_management_system.service.UsersService;
+import backend.event_management_system.service.VerificationTokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +14,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping(path = {"/user"})
@@ -22,11 +25,13 @@ public class UsersController {
 
     private final UsersService usersService;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final VerificationTokenService verificationTokenService;
 
     @Autowired
-    public UsersController(UsersService usersService, BCryptPasswordEncoder bCryptPasswordEncoder) {
+    public UsersController(UsersService usersService, BCryptPasswordEncoder bCryptPasswordEncoder, VerificationTokenService verificationTokenService) {
         this.usersService = usersService;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+        this.verificationTokenService = verificationTokenService;
     }
 
 
@@ -45,16 +50,42 @@ public class UsersController {
         }
     }
 
+    @GetMapping("/verify")
+    public ResponseEntity<?> verifyEmail(@RequestParam("token") String token) {
+        try {
+            Users user = verificationTokenService.validateVerificationToken(token);
+            if (user != null) {
+                // Redirect to frontend success page
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .location(URI.create("http://localhost:3000/verification-success"))
+                        .build();
+            } else {
+                // Redirect to frontend error page
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .location(URI.create("http://localhost:3000/verification-failed"))
+                        .build();
+            }
+        } catch (Exception e) {
+            // Redirect to frontend error page
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create("http://localhost:3000/verification-error"))
+                    .build();
+        }
+    }
 
     @PostMapping(path = {"/login"})
     public ResponseEntity<String> loginUser(@RequestParam("email") String email,
                             @RequestParam("password") String password
-                            ) throws UserNotFoundException, EmailNotFoundException {
+                            ) throws UserNotFoundException, EmailNotFoundException, EmailNotVerifiedException {
         try {
             String serverResponseToken = usersService.login(email, password);
             return new ResponseEntity<>(serverResponseToken, HttpStatus.OK);
-        } catch (UserNotFoundException | EmailNotFoundException exception){
-            return new ResponseEntity<>("Invalid email or password.", HttpStatus.NOT_ACCEPTABLE);
+        } catch (UserNotFoundException | EmailNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password.");
+        } catch (EmailNotVerifiedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred during login.");
         }
     }
 
@@ -72,6 +103,19 @@ public class UsersController {
 
        List<Users> usersList = usersService.getUsers();
         return new ResponseEntity<>(usersList, HttpStatus.OK);
+    }
+
+    @GetMapping(path = {"/admin-username/{adminEmail}"})
+    @PreAuthorize("hasAuthority('user:delete')")
+    public ResponseEntity<String> getAdminUsername(@PathVariable String adminEmail){
+        String username = usersService.getUsernameFromEmail(adminEmail);
+        return ResponseEntity.ok(username);
+    }
+
+    @GetMapping(path = {"/{publisherEmail}"})
+    public ResponseEntity<Users> getPublisherInfo(@PathVariable String publisherEmail){
+        Optional<Users> user = usersService.getPublisherInfoFromEmail(publisherEmail);
+        return  ResponseEntity.of(user);
     }
 
     @PutMapping(path = {"/update-role/{id}"})

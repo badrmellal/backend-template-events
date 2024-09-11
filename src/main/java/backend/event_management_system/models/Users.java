@@ -25,6 +25,7 @@ public class Users implements Serializable, UserDetails {
     private String username;
     private String email;
     private String profileImageUrl;
+    private String phoneNumber;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String userPassword;
     private  String role;
@@ -32,6 +33,9 @@ public class Users implements Serializable, UserDetails {
     private Date joinDate;
     private Date lastLoginDate;
     private Date lastLoginDateDisplay;
+    private boolean enabled;
+    private String verificationToken;
+    private Date verificationTokenExpiryDate;
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Tickets> tickets = new HashSet<>();
 
@@ -106,6 +110,39 @@ public class Users implements Serializable, UserDetails {
         this.lastLoginDateDisplay = lastLoginDateDisplay;
     }
 
+
+    @Override
+    public boolean isEnabled() {
+        return this.enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getVerificationToken() {
+        return verificationToken;
+    }
+
+    public void setVerificationToken(String verificationToken) {
+        this.verificationToken = verificationToken;
+    }
+
+    public Date getVerificationTokenExpiryDate() {
+        return verificationTokenExpiryDate;
+    }
+
+    public void setVerificationTokenExpiryDate(Date verificationTokenExpiryDate) {
+        this.verificationTokenExpiryDate = verificationTokenExpiryDate;
+    }
 
 
     @Override

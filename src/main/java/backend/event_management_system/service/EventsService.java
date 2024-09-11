@@ -1,17 +1,21 @@
 package backend.event_management_system.service;
 
 import backend.event_management_system.constant.EventsSpecialFiltering;
+import backend.event_management_system.models.EventTicketType;
 import backend.event_management_system.models.Events;
 import backend.event_management_system.repository.EventsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class EventsService implements EventServiceInterface {
@@ -27,41 +31,51 @@ public class EventsService implements EventServiceInterface {
         this.bucketName = bucketName;
     }
 
-    @Override
-    public List<Events> getAllEvents(Optional<FilteredEvents> filteredEvents) {
-        if (filteredEvents.isEmpty()){
-            return eventsRepository.findAll();
-        } else {
-            Specification<Events> specialFilter = EventsSpecialFiltering.filterBy(filteredEvents.get());
-            return eventsRepository.findAll(specialFilter);
-        }
-    }
 
     @Override
     public List<Events> getApprovedEvents(Optional<FilteredEvents> filteredEvents) {
-        return filteredEvents.map(events -> eventsRepository.findAll(EventsSpecialFiltering.filterBy(events)))
-                .orElseGet(() -> eventsRepository.findByIsApproved(true));
+        if (filteredEvents.isEmpty()) {
+            return processEventUrls(eventsRepository.findByIsApproved(true));
+        } else {
+            Specification<Events> specialFilter = EventsSpecialFiltering.filterBy(filteredEvents.get());
+            return processEventUrls(eventsRepository.findAll(specialFilter.and((root, query, cb) -> cb.isTrue(root.get("isApproved")))));
+        }
     }
 
 
     @Override
-    public List<Events> getEventBySearch(String searchKeyword) {
-        return eventsRepository.findByEventNameContainingIgnoreCaseOrEventDescriptionContainingIgnoreCase(searchKeyword, searchKeyword);
+    public List<Events> searchEvents(String keyword) {
+        return processEventUrls(eventsRepository.findByEventNameContainingIgnoreCaseOrEventDescriptionContainingIgnoreCase(keyword, keyword));
     }
 
     @Override
     public Events getEventById(Long id) {
-        return eventsRepository.findById(id).orElse(null);
+        Optional<Events> eventOptional = eventsRepository.findById(id);
+        if (eventOptional.isPresent()) {
+            Events event = eventOptional.get();
+            return processEventUrls(event);
+        }
+        return null;
     }
 
 
     @Override
     public List<Events> getEventsByUsername(String publisherEmail) {
         List<Events> events = eventsRepository.findByEventManagerUsername(publisherEmail);
-        for (Events event: events){
-            String objectKey = extractObjectKeyFromUrl(event.getEventImage());
-            String presignedUrl = s3Service.generatePresignedUrl(objectKey);
-            event.setEventImage(presignedUrl);
+        for (Events event : events) {
+            List<String> presignedUrls = new ArrayList<>();
+            for (String imageUrl : event.getEventImages()) {
+                String objectKey = extractObjectKeyFromUrl(imageUrl);
+                String presignedUrl = s3Service.generatePresignedUrl(objectKey);
+                presignedUrls.add(presignedUrl);
+            }
+            event.setEventImages(presignedUrls);
+
+            if (event.getEventVideo() != null) {
+                String videoObjectKey = extractObjectKeyFromUrl(event.getEventVideo());
+                String presignedVideoUrl = s3Service.generatePresignedUrl(videoObjectKey);
+                event.setEventVideo(presignedVideoUrl);
+            }
         }
         return events;
     }
@@ -72,23 +86,36 @@ public class EventsService implements EventServiceInterface {
     }
 
     @Override
-    public Events createEvent(Events event) {
+    public Events createEvent(Events event, List<EventTicketType> ticketTypes) {
+        for (EventTicketType ticketType : ticketTypes) {
+            event.addTicketType(ticketType);
+        }
         return eventsRepository.save(event);
     }
 
     @Override
-    public Events updateEvent(Long id, Events updatedEvent) {
+    public Events updateEvent(Long id, Events updatedEvent, List<EventTicketType> updatedTicketTypes) {
         return eventsRepository.findById(id)
                 .map(event -> {
                     event.setEventName(updatedEvent.getEventName());
                     event.setEventCategory(updatedEvent.getEventCategory());
                     event.setEventDescription(updatedEvent.getEventDescription());
-                    event.setEventImage(updatedEvent.getEventImage());
-                    event.setEventVideo(updatedEvent.getEventVideo());
+                    event.setFreeEvent(updatedEvent.isFreeEvent());
+                    if (updatedEvent.getEventImages() != null && !updatedEvent.getEventImages().isEmpty()) {
+                        event.setEventImages(updatedEvent.getEventImages());
+                    }
+                    if (updatedEvent.getEventVideo() != null) {
+                        event.setEventVideo(updatedEvent.getEventVideo());
+                    }
                     event.setEventPrice(updatedEvent.getEventPrice());
                     event.setEventDate(updatedEvent.getEventDate());
+                    event.setApproved(false);
                     event.setAddressLocation(updatedEvent.getAddressLocation());
                     event.setGoogleMapsUrl(updatedEvent.getGoogleMapsUrl());
+                    event.getTicketTypes().clear();
+                    for (EventTicketType ticketType : updatedTicketTypes) {
+                        event.addTicketType(ticketType);
+                    }
                     return eventsRepository.save(event);
                 })
                 .orElseThrow(() -> new RuntimeException("Event not found"));
@@ -105,11 +132,7 @@ public class EventsService implements EventServiceInterface {
         return eventsRepository.findByEventManagerUsername(userId.toString());
     }
 
-    @Override
-    public List<Events> getEventsPendingApproval() {
-        // This for publisher and purpose is to get all pending approval events
-        return eventsRepository.findByIsApproved(false);
-    }
+
 
     @Override
     public Events approveEvents(Long id) {
@@ -131,18 +154,59 @@ public class EventsService implements EventServiceInterface {
                 .orElseThrow(() -> new RuntimeException("Event not found"));
     }
 
+    @Override
+    public List<Events> getAllEvents(Optional<FilteredEvents> filteredEvents) {
+        if (filteredEvents.isEmpty()) {
+            List<Events> events = eventsRepository.findAll();
+            return processEventUrls(events);
+        } else {
+            Specification<Events> specialFilter = EventsSpecialFiltering.filterBy(filteredEvents.get());
+            return processEventUrls(eventsRepository.findAll(specialFilter));
+        }
+    }
 
+
+    @Override
+    public List<Events> getEventsPendingApproval() {
+        List<Events> pendingEvents = eventsRepository.findByIsApproved(false);
+        return processEventUrls(pendingEvents);
+    }
 
 
 //    private String extractObjectKeyFromUrl(String url) {
-//        // This method assumes the URL format is: https://bucket-name.s3.region.amazonaws.com/object-key
-//        // Adjust this logic if your S3 URL format is different
 //        String[] parts = url.split(bucketName + "\\.");
 //        if (parts.length > 1) {
 //            return parts[1].substring(parts[1].indexOf("/") + 1);
 //        }
 //        throw new IllegalArgumentException("Invalid S3 URL format");
 //    }
+
+    private List<Events> processEventUrls(List<Events> events) {
+        for (Events event : events) {
+            event = processEventUrls(event);
+        }
+        return events;
+    }
+
+    private Events processEventUrls(Events event) {
+        List<String> presignedUrls = new ArrayList<>();
+        for (String imageUrl : event.getEventImages()) {
+            String objectKey = extractObjectKeyFromUrl(imageUrl);
+            String presignedUrl = s3Service.generatePresignedUrl(objectKey);
+            presignedUrls.add(presignedUrl);
+        }
+        event.setEventImages(presignedUrls);
+
+        if (event.getEventVideo() != null) {
+            String videoObjectKey = extractObjectKeyFromUrl(event.getEventVideo());
+            String presignedVideoUrl = s3Service.generatePresignedUrl(videoObjectKey);
+            event.setEventVideo(presignedVideoUrl);
+        }
+        return event;
+    }
+
+
+
 private String extractObjectKeyFromUrl(String url) {
     try {
         String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);

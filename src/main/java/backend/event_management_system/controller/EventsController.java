@@ -2,12 +2,20 @@ package backend.event_management_system.controller;
 
 import backend.event_management_system.exceptions.EmailNotFoundException;
 import backend.event_management_system.jwt.JwtTokenProvider;
+import backend.event_management_system.models.EventTicketType;
 import backend.event_management_system.models.Events;
 import backend.event_management_system.models.Users;
 import backend.event_management_system.service.EventsService;
 import backend.event_management_system.service.FilteredEvents;
 import backend.event_management_system.service.S3Service;
 import backend.event_management_system.service.UsersService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,8 +26,13 @@ import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.List;
-import java.util.Optional;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.*;
 
 @RestController
 @RequestMapping(path = {"/events"})
@@ -30,6 +43,10 @@ public class EventsController {
     private final UsersService usersService;
     private final JwtTokenProvider jwtTokenProvider;
     private final S3Service s3Service;
+
+    private LocalDateTime parseEventDate(String eventDate) {
+        return LocalDateTime.ofInstant(Instant.parse(eventDate), ZoneId.of("UTC"));
+    }
 
     public EventsController(EventsService eventsService, UsersService usersService, JwtTokenProvider jwtTokenProvider, S3Service s3Service) {
         this.eventsService = eventsService;
@@ -45,18 +62,15 @@ public class EventsController {
     }
 
     @GetMapping(path = {"/home"})
-    public List<Events> getApprovedEvents(@RequestParam Optional<FilteredEvents> filteredEvents) {
-        return eventsService.getApprovedEvents(filteredEvents);
+    public ResponseEntity<List<Events>> getApprovedEvents(
+            @RequestParam Optional<FilteredEvents> filteredEvents) {
+        return ResponseEntity.ok(eventsService.getApprovedEvents(filteredEvents));
     }
 
-    @GetMapping(path = {"/search"})
-    public List<Events> getEventsByKeywordSearch(@RequestParam String keyword){
-        return eventsService.getEventBySearch(keyword);
-    }
 
-    @GetMapping("/{id}")
-    public Events getEventById(@PathVariable Long id){
-        return eventsService.getEventById(id);
+    @GetMapping("/{eventId}")
+    public Events getEventById(@PathVariable Long eventId){
+        return eventsService.getEventById(eventId);
     }
 
     @GetMapping("/publisher/{tokenEmail}")
@@ -77,65 +91,166 @@ public class EventsController {
                                               @RequestParam("eventName") String eventName,
                                               @RequestParam("eventCategory") String eventCategory,
                                               @RequestParam("eventDescription") String eventDescription,
+                                              @RequestParam("isFreeEvent") boolean isFreeEvent,
                                               @RequestParam("eventPrice") float eventPrice,
+                                              @RequestParam("eventCurrency") String eventCurrency,
                                               @RequestParam("eventDate") String eventDate,
                                               @RequestParam("addressLocation") String addressLocation,
                                               @RequestParam("googleMapsUrl") String googleMapsUrl,
                                               @RequestParam("totalTickets") int totalTickets,
-                                              @RequestParam("eventImage") MultipartFile eventImage,
-                                              @RequestParam(value = "eventVideo", required = false) MultipartFile eventVideo) throws ParseException {
+                                              @RequestParam("ticketTypes") String ticketTypesJson,
+                                              @RequestParam("eventImages") List<MultipartFile> eventImages,
+                                              @RequestParam(value = "eventVideo", required = false) MultipartFile eventVideo) throws ParseException, JsonProcessingException {
 
         String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
-
-        String imageUrl = s3Service.uploadEventFile(eventName, eventImage);
-        String videoUrl = eventVideo != null ? s3Service.uploadEventFile(eventName, eventVideo) : "";
-
         Events event = new Events();
+
+        // Handling multiple image uploads
+        for (MultipartFile imageFile : eventImages) {
+            String imageUrl = s3Service.uploadEventFile(eventName, imageFile);
+            event.addEventImage(imageUrl);
+        }
+
+        // Handling video upload
+        if (eventVideo != null) {
+            String videoUrl = s3Service.uploadEventFile(eventName, eventVideo);
+            event.setEventVideo(videoUrl);
+        }
+
+        LocalDateTime localDateTime = parseEventDate(eventDate);
+        event.setEventDate(localDateTime);
 
         event.setEventManagerUsername(email);
         event.setEventName(eventName);
         event.setEventCategory(eventCategory);
         event.setEventDescription(eventDescription);
-        event.setEventImage(imageUrl);
-        event.setEventVideo(videoUrl);
+        event.setFreeEvent(isFreeEvent);
+        event.setApproved(false);
         event.setEventPrice(eventPrice);
-        event.setEventDate(new SimpleDateFormat("yyyy-MM-dd").parse(eventDate)); // to format the date
+        event.setEventCurrency(eventCurrency);
+        event.setEventCreationDate(LocalDateTime.now());
+        event.setEventDate(localDateTime);
         event.setAddressLocation(addressLocation);
         event.setGoogleMapsUrl(googleMapsUrl);
         event.setTotalTickets(totalTickets);
         event.setRemainingTickets(totalTickets); // Initialize remaining tickets to total tickets
 
-        return ResponseEntity.ok(eventsService.createEvent(event));
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<EventTicketType> ticketTypes = objectMapper.readValue(ticketTypesJson, new TypeReference<List<EventTicketType>>() {});
+
+        return ResponseEntity.ok(eventsService.createEvent(event, ticketTypes));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('event:update')")
-    public Events updateEvent(@PathVariable Long id, @RequestBody Events event){
-        return eventsService.updateEvent(id, event);
+    public ResponseEntity<Events> updateEvent(@PathVariable Long id,
+                                              @RequestParam("eventName") String eventName,
+                                              @RequestParam("eventCategory") String eventCategory,
+                                              @RequestParam("eventDescription") String eventDescription,
+                                              @RequestParam("isFreeEvent") boolean isFreeEvent,
+                                              @RequestParam("eventPrice") float eventPrice,
+                                              @RequestParam("eventCurrency") String eventCurrency,
+                                              @RequestParam("eventDate") String eventDate,
+                                              @RequestParam("addressLocation") String addressLocation,
+                                              @RequestParam("googleMapsUrl") String googleMapsUrl,
+                                              @RequestParam("ticketTypes") String ticketTypesJson,
+                                              @RequestParam("totalTickets") int totalTickets,
+                                              @RequestParam(value = "eventImages", required = false) List<MultipartFile> newEventImages,
+                                              @RequestParam(value = "eventVideo", required = false) MultipartFile eventVideo) throws ParseException, JsonProcessingException {
+
+        Events updatedEvent = new Events();
+        LocalDateTime localDateTime = parseEventDate(eventDate);
+
+        updatedEvent.setEventDate(localDateTime);
+
+        updatedEvent.setId(id);
+        updatedEvent.setEventName(eventName);
+        updatedEvent.setEventCategory(eventCategory);
+        updatedEvent.setEventDescription(eventDescription);
+        updatedEvent.setFreeEvent(isFreeEvent);
+        updatedEvent.setEventPrice(eventPrice);
+        updatedEvent.setEventCurrency(eventCurrency);
+        updatedEvent.setAddressLocation(addressLocation);
+        updatedEvent.setGoogleMapsUrl(googleMapsUrl);
+        updatedEvent.setTotalTickets(totalTickets);
+
+        // new images
+        if (newEventImages != null && !newEventImages.isEmpty()) {
+            List<String> newImageUrls = new ArrayList<>();
+            for (MultipartFile imageFile : newEventImages) {
+                String imageUrl = s3Service.uploadEventFile(eventName, imageFile);
+                newImageUrls.add(imageUrl);
+            }
+            updatedEvent.setEventImages(newImageUrls);
+        }
+
+        // handle video
+        if (eventVideo != null) {
+            String videoUrl = s3Service.uploadEventFile(eventName, eventVideo);
+            updatedEvent.setEventVideo(videoUrl);
+        }
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<EventTicketType> updatedTicketTypes = objectMapper.readValue(ticketTypesJson, new TypeReference<List<EventTicketType>>() {});
+
+        Events updated = eventsService.updateEvent(id, updatedEvent, updatedTicketTypes);
+        return ResponseEntity.ok(updated);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{eventId}")
     @PreAuthorize("hasAuthority('event:delete')")
-    public void deleteEvent(@PathVariable Long id){
-         eventsService.deleteEvent(id);
+    public ResponseEntity<?> deleteEvent(@PathVariable Long eventId){
+       try {
+           Events event = eventsService.getEventById(eventId);
+           for (String imageUrl : event.getEventImages()){
+               s3Service.deleteEventFile(imageUrl);
+           }
+           if (event.getEventVideo() != null){
+               s3Service.deleteEventFile(event.getEventVideo());
+           }
+           eventsService.deleteEvent(eventId);
+           return ResponseEntity.ok().body("Event deleted successfully");
+       } catch (Exception e){
+           return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e);
+       }
+
+
+    }
+
+
+    @PutMapping("/approve/{eventId}")
+    @PreAuthorize("hasAuthority('event:approve')")
+    public ResponseEntity<?> approveEvent(@PathVariable Long eventId) {
+        try {
+            Events approvedEvent = eventsService.approveEvents(eventId);
+            return ResponseEntity.ok(approvedEvent);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Error approving event: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/reject/{eventId}")
+    @PreAuthorize("hasAuthority('event:deny')")
+    public Events rejectEvent(@PathVariable Long eventId){
+        return eventsService.rejectEvents(eventId);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Events>> getAllEvents(
+            @RequestParam Optional<FilteredEvents> filteredEvents) {
+        return ResponseEntity.ok(eventsService.getAllEvents(filteredEvents));
     }
 
     @GetMapping("/pending")
     @PreAuthorize("hasAuthority('event:create')")
-    public List<Events> getEventsPendingApproval(){
-        return eventsService.getEventsPendingApproval();
+    public ResponseEntity<List<Events>> getEventsPendingApproval() {
+        return ResponseEntity.ok(eventsService.getEventsPendingApproval());
     }
 
-    @PutMapping("/approve/{id}")
-    @PreAuthorize("hasAuthority('event:approve')")
-    public Events approveEvent(@PathVariable Long id){
-        return eventsService.approveEvents(id);
+    @GetMapping("/search")
+    public ResponseEntity<List<Events>> searchEvents(
+            @RequestParam String keyword) {
+        return ResponseEntity.ok(eventsService.searchEvents(keyword));
     }
-
-    @PutMapping("/reject/{id}")
-    @PreAuthorize("hasAuthority('event:deny')")
-    public Events rejectEvent(@PathVariable Long id){
-        return eventsService.rejectEvents(id);
-    }
-
 }

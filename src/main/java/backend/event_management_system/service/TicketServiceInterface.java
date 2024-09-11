@@ -8,8 +8,12 @@ import java.util.List;
 
 public interface TicketServiceInterface {
 
-    Tickets purchaseTicket(Users user, Events event, String ticketType, int quantity);
     List<Tickets> getTicketsByUser(Users user);
+    Tickets purchaseTicket(Users user, Events event, String ticketType, int quantity, String paymentMethod, String promoCode);
+    Tickets confirmPayment(Long ticketId);
+    // other methods ...
+    List<Tickets> getPendingTickets();
+    List<Tickets> getCompletedTickets();
 
     //for publisher
     List<Tickets> getTicketsByEvent(Events event);

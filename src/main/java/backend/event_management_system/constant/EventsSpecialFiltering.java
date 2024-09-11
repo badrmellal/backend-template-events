@@ -29,16 +29,16 @@ public class EventsSpecialFiltering {
                 predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("eventDate"), filteredEvents.getEndDate()));
             }
             if (filteredEvents.getLocation() != null) {
-                predicates.add(criteriaBuilder.equal(root.get("location"), filteredEvents.getLocation()));
+                predicates.add(criteriaBuilder.equal(root.get("addressLocation"), filteredEvents.getLocation()));
             }
             if (filteredEvents.getMinPrice() != null) {
-                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("price"), filteredEvents.getMinPrice()));
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("eventPrice"), filteredEvents.getMinPrice()));
             }
             if (filteredEvents.getMaxPrice() != null) {
-                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("price"), filteredEvents.getMaxPrice()));
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("eventPrice"), filteredEvents.getMaxPrice()));
             }
 
-            return criteriaBuilder.and(predicates.toArray(new  Predicate[0]));
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }
 }
