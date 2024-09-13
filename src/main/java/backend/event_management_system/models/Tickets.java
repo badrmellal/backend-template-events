@@ -55,7 +55,7 @@ public class Tickets {
         this.promoCodeUsed = promoCodeUsed;
     }
 
-    public EventTicketType getTicketType() {
+    public EventTicketTypes getTicketType() {
         return event.getTicketTypeById(id.getTicketTypeId());
     }
 

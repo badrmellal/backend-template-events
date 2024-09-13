@@ -28,7 +28,7 @@ public class TicketsService implements TicketServiceInterface {
     @Override
     @Transactional
     public Tickets purchaseTicket(Users user, Events event, String ticketTypeName, int quantity, String paymentMethod, String promoCode) {
-        EventTicketType ticketType = event.getTicketTypes().stream()
+        EventTicketTypes ticketType = event.getTicketTypes().stream()
                 .filter(tt -> tt.getName().equals(ticketTypeName))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Ticket type not found for this event."));
@@ -107,7 +107,7 @@ public class TicketsService implements TicketServiceInterface {
             throw new RuntimeException("Cannot delete a ticket with completed payment");
         }
 
-        EventTicketType ticketType = ticket.getTicketType();
+        EventTicketTypes ticketType = ticket.getTicketType();
         ticketType.setSoldTickets(ticketType.getSoldTickets() - ticket.getQuantity());
 
         ticketsRepository.delete(ticket);
@@ -134,7 +134,7 @@ public class TicketsService implements TicketServiceInterface {
     @Override
     public int countTicketsSoldForEvent(Events event) {
         return event.getTicketTypes().stream()
-                .mapToInt(EventTicketType::getSoldTickets)
+                .mapToInt(EventTicketTypes::getSoldTickets)
                 .sum();
     }
 
@@ -161,6 +161,5 @@ public class TicketsService implements TicketServiceInterface {
     public List<Tickets> getTicketsByUserAndEvent(Users user, Events event) {
         return ticketsRepository.findByUserAndEvent(user, event);
     }
-
 
 }

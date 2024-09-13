@@ -1,6 +1,6 @@
 package backend.event_management_system.service;
 
-import backend.event_management_system.models.EventTicketType;
+import backend.event_management_system.models.EventTicketTypes;
 import backend.event_management_system.models.Events;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,8 +19,8 @@ public interface EventServiceInterface {
 
 
     //for publisher
-    Events createEvent(Events events, List<EventTicketType> ticketTypes);
-    Events updateEvent(Long id, Events updatedEvent, List<EventTicketType> updatedTicketTypes);
+    Events createEvent(Events events);
+    Events updateEvent(Long id, Events updatedEvent, List<EventTicketTypes> updatedTicketTypes);
     void deleteEvent(Long id);
     List<Events> getAllEventsCreated (Long userId);
 

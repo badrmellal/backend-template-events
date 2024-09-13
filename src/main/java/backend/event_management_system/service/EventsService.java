@@ -1,7 +1,7 @@
 package backend.event_management_system.service;
 
 import backend.event_management_system.constant.EventsSpecialFiltering;
-import backend.event_management_system.models.EventTicketType;
+import backend.event_management_system.models.EventTicketTypes;
 import backend.event_management_system.models.Events;
 import backend.event_management_system.repository.EventsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,15 +86,12 @@ public class EventsService implements EventServiceInterface {
     }
 
     @Override
-    public Events createEvent(Events event, List<EventTicketType> ticketTypes) {
-        for (EventTicketType ticketType : ticketTypes) {
-            event.addTicketType(ticketType);
-        }
+    public Events createEvent(Events event) {
         return eventsRepository.save(event);
     }
 
     @Override
-    public Events updateEvent(Long id, Events updatedEvent, List<EventTicketType> updatedTicketTypes) {
+    public Events updateEvent(Long id, Events updatedEvent, List<EventTicketTypes> updatedTicketTypes) {
         return eventsRepository.findById(id)
                 .map(event -> {
                     event.setEventName(updatedEvent.getEventName());
@@ -112,7 +109,7 @@ public class EventsService implements EventServiceInterface {
                     event.setAddressLocation(updatedEvent.getAddressLocation());
                     event.setGoogleMapsUrl(updatedEvent.getGoogleMapsUrl());
                     event.getTicketTypes().clear();
-                    for (EventTicketType ticketType : updatedTicketTypes) {
+                    for (EventTicketTypes ticketType : updatedTicketTypes) {
                         event.addTicketType(ticketType);
                     }
                     return eventsRepository.save(event);
@@ -130,8 +127,6 @@ public class EventsService implements EventServiceInterface {
         // This is for the publisher to get all events that he published
         return eventsRepository.findByEventManagerUsername(userId.toString());
     }
-
-
 
     @Override
     public Events approveEvents(Long id) {
@@ -203,7 +198,6 @@ public class EventsService implements EventServiceInterface {
         }
         return event;
     }
-
 
 
 private String extractObjectKeyFromUrl(String url) {
