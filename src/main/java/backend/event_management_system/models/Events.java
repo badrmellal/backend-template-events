@@ -15,6 +15,7 @@ public class Events {
     private Long id;
     private String eventCategory;
     private String eventName;
+    @Column(length = 1000)
     private String eventDescription;
     @ElementCollection
     @CollectionTable(name = "event_images", joinColumns = @JoinColumn(name = "event_id"))
@@ -32,7 +33,7 @@ public class Events {
     private LocalDateTime eventCreationDate;
     @ElementCollection
     @CollectionTable(name = "event_ticket_types", joinColumns = @JoinColumn(name = "event_id"))
-    private List<EventTicketType> ticketTypes = new ArrayList<>();
+    private List<EventTicketTypes> ticketTypes = new ArrayList<>();
     private int totalTickets;
     private int remainingTickets;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "event", orphanRemoval = true)
@@ -62,7 +63,7 @@ public class Events {
         this.tickets = tickets;
     }
 
-    public EventTicketType getTicketTypeById(String ticketTypeId) {
+    public EventTicketTypes getTicketTypeById(String ticketTypeId) {
         return ticketTypes.stream()
                 .filter(tt -> tt.getTicketTypeId().equals(ticketTypeId))
                 .findFirst()
@@ -210,10 +211,6 @@ public class Events {
         this.remainingTickets = totalTickets;  // Initialize remaining tickets to total tickets
     }
 
-    public int getRemainingTickets() {
-        return remainingTickets;
-    }
-
     public void setRemainingTickets(int remainingTickets) {
         this.remainingTickets = remainingTickets;
     }
@@ -231,20 +228,30 @@ public class Events {
     }
 
 
-    public List<EventTicketType> getTicketTypes() {
+    public List<EventTicketTypes> getTicketTypes() {
         return ticketTypes;
     }
 
-    public void setTicketTypes(List<EventTicketType> ticketTypes) {
+    public void setTicketTypes(List<EventTicketTypes> ticketTypes) {
         this.ticketTypes = ticketTypes;
     }
 
-    public void addTicketType(EventTicketType ticketType) {
+    public void removeTicketType(EventTicketTypes ticketType) {
+        this.ticketTypes.remove(ticketType);
+    }
+
+    public void addTicketType(EventTicketTypes ticketType) {
+        if (this.ticketTypes == null) {
+            this.ticketTypes = new ArrayList<>();
+        }
         this.ticketTypes.add(ticketType);
     }
 
-    public void removeTicketType(EventTicketType ticketType) {
-        this.ticketTypes.remove(ticketType);
+    public int getRemainingTickets() {
+        return this.ticketTypes.stream()
+                .mapToInt(EventTicketTypes::getRemainingTickets)
+                .sum();
     }
+
 }
 

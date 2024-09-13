@@ -2,7 +2,8 @@ package backend.event_management_system.controller;
 
 import backend.event_management_system.exceptions.EmailNotFoundException;
 import backend.event_management_system.jwt.JwtTokenProvider;
-import backend.event_management_system.models.EventTicketType;
+
+import backend.event_management_system.models.EventTicketTypes;
 import backend.event_management_system.models.Events;
 import backend.event_management_system.models.Users;
 import backend.event_management_system.service.EventsService;
@@ -131,9 +132,17 @@ public class EventsController {
         event.setGoogleMapsUrl(googleMapsUrl);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        List<EventTicketType> ticketTypes = objectMapper.readValue(ticketTypesJson, new TypeReference<List<EventTicketType>>() {});
+        List<EventTicketTypes> ticketTypes = objectMapper.readValue(ticketTypesJson, new TypeReference<List<EventTicketTypes>>() {});
+        // Generating ticketTypeId for each ticket type
+                for (EventTicketTypes ticketType : ticketTypes) {
+                    ticketType.setTicketTypeId(UUID.randomUUID().toString());
+                    ticketType.setSoldTickets(0);
+                    ticketType.setFree(isFreeEvent);
+                    ticketType.setCurrency(eventCurrency);
+                }
 
-        return ResponseEntity.ok(eventsService.createEvent(event, ticketTypes));
+                event.setTicketTypes(ticketTypes);
+        return ResponseEntity.ok(eventsService.createEvent(event));
     }
 
     @PutMapping("/{id}")
@@ -184,7 +193,7 @@ public class EventsController {
         }
 
         ObjectMapper objectMapper = new ObjectMapper();
-        List<EventTicketType> updatedTicketTypes = objectMapper.readValue(ticketTypesJson, new TypeReference<List<EventTicketType>>() {});
+        List<EventTicketTypes> updatedTicketTypes = objectMapper.readValue(ticketTypesJson, new TypeReference<List<EventTicketTypes>>() {});
 
         Events updated = eventsService.updateEvent(id, updatedEvent, updatedTicketTypes);
         return ResponseEntity.ok(updated);
@@ -206,8 +215,6 @@ public class EventsController {
        } catch (Exception e){
            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e);
        }
-
-
     }
 
 

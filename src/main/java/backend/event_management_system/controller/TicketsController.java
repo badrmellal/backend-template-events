@@ -45,8 +45,12 @@ public class TicketsController {
         if (!event.isApproved()) {
             return ResponseEntity.badRequest().body(null);
         }
-        Tickets ticket = ticketsService.purchaseTicket(user, event, ticketTypeName, quantity, paymentMethod, promoCode);
-        return ResponseEntity.ok(ticket);
+        try {
+            Tickets ticket = ticketsService.purchaseTicket(user, event, ticketTypeName, quantity, paymentMethod, promoCode);
+            return ResponseEntity.ok(ticket);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 
     @PostMapping("/confirm-payment")

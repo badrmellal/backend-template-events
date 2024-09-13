@@ -3,19 +3,18 @@ package backend.event_management_system.models;
 import jakarta.persistence.Embeddable;
 
 @Embeddable
-public class EventTicketType {
+public class EventTicketTypes {
     private String name;
     private float price;
     private String currency;
     private int totalTickets;
     private int soldTickets;
     private boolean isFree;
-
     private String ticketTypeId;
 
-    public EventTicketType() {}
+    public EventTicketTypes() {}
 
-    public EventTicketType(String name, String ticketTypeId, float price, String currency, int totalTickets, boolean isFree) {
+    public EventTicketTypes(String name, String ticketTypeId, float price, String currency, int totalTickets, boolean isFree) {
         this.name = name;
         this.price = price;
         this.currency = currency;
@@ -69,16 +68,13 @@ public class EventTicketType {
         return isFree;
     }
 
-    public void setFree(boolean free) {
-        isFree = free;
+    public void setFree(boolean isFree) {
+        this.isFree = isFree;
     }
 
     public int getRemainingTickets() {
         return totalTickets - soldTickets;
     }
-
-
-
 
     public String getTicketTypeId() {
         return ticketTypeId;
