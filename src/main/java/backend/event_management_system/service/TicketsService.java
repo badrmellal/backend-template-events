@@ -1,6 +1,7 @@
 package backend.event_management_system.service;
 
 import backend.event_management_system.constant.TicketSequenceGenerator;
+import backend.event_management_system.dto.TicketsDto;
 import backend.event_management_system.models.*;
 import backend.event_management_system.repository.EventsRepository;
 import backend.event_management_system.repository.TicketsRepository;
@@ -68,6 +69,17 @@ public class TicketsService implements TicketServiceInterface {
 
         // Save the ticket
         return ticketsRepository.save(ticket);
+    }
+
+    public TicketsDto convertToDto(Tickets ticket) {
+        return TicketsDto.builder()
+                .isTicketActive(ticket.isTicketActive())
+                .fees(ticket.getFees())
+                .vat(ticket.getVat())
+                .totalAmount(ticket.getTotalAmount())
+                .quantity(ticket.getQuantity())
+                .ticketTypeId(ticket.getId().getTicketTypeId())
+                .build();
     }
 
     @Transactional
