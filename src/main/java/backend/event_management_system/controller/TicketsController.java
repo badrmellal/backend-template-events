@@ -4,6 +4,7 @@ import backend.event_management_system.dto.TicketsDto;
 import backend.event_management_system.exceptions.EmailNotFoundException;
 import backend.event_management_system.jwt.JwtTokenProvider;
 import backend.event_management_system.models.*;
+import backend.event_management_system.repository.EventsRepository;
 import backend.event_management_system.service.EventsService;
 import backend.event_management_system.service.TicketsService;
 import backend.event_management_system.service.UsersService;
@@ -13,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping(path = {"/tickets"})
@@ -23,13 +25,15 @@ public class TicketsController {
     private final EventsService eventsService;
     private final UsersService usersService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final EventsRepository eventsRepository;
 
     @Autowired
-    public TicketsController(TicketsService ticketsService, EventsService eventsService, UsersService usersService, JwtTokenProvider jwtTokenProvider) {
+    public TicketsController(TicketsService ticketsService, EventsService eventsService, UsersService usersService, JwtTokenProvider jwtTokenProvider, EventsRepository eventsRepository) {
         this.ticketsService = ticketsService;
         this.eventsService = eventsService;
         this.usersService = usersService;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.eventsRepository = eventsRepository;
     }
 
     @PostMapping("/purchase/{eventId}")
@@ -42,7 +46,9 @@ public class TicketsController {
                                                   @RequestParam(required = false) String promoCode) throws EmailNotFoundException {
         String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
         Users user = usersService.findUserByEmail(email);
-        Events event = eventsService.getEventById(eventId);
+        Events event = eventsRepository.findById(eventId).orElseThrow(
+                () -> new RuntimeException("Event not found")
+        );
         if (!event.isApproved()) {
             return ResponseEntity.badRequest().body(null);
         }
@@ -59,6 +65,7 @@ public class TicketsController {
             return ResponseEntity.ok(ticketsDto);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(null);
+
         }
     }
 
@@ -93,7 +100,9 @@ public class TicketsController {
     public ResponseEntity<List<Tickets>> getEventTickets(@RequestHeader("Authorization") String token, @PathVariable Long eventId) throws EmailNotFoundException {
         String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
         Users user = usersService.findUserByEmail(email);
-        Events event = eventsService.getEventById(eventId);
+        Events event = eventsRepository.findById(eventId).orElseThrow(
+                () -> new RuntimeException("Event not found")
+        );
 
         if (!user.getEmail().equals(event.getEventManagerUsername())) {
             return ResponseEntity.status(403).build();

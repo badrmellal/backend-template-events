@@ -46,9 +46,7 @@ public class TicketsService implements TicketServiceInterface {
         if (promoCode != null && !promoCode.isEmpty()) {
             totalAmount = applyPromoCode(totalAmount, promoCode);
         }
-        ArrayList<String> image = new ArrayList<>();
-        image.add("https://africa-events.s3.eu-west-3.amazonaws.com/created-event/Partyyy_20240918112954.jpeg");
-        event.setEventImages(image);
+
         String sequenceNumber = TicketSequenceGenerator.generateSequenceNumber();
         TicketId ticketId = new TicketId(event.getId(), ticketType.getTicketTypeId(), sequenceNumber);
         Tickets ticket = new Tickets();

@@ -1,5 +1,6 @@
 package backend.event_management_system.controller;
 
+import backend.event_management_system.dto.EventsDto;
 import backend.event_management_system.exceptions.EmailNotFoundException;
 import backend.event_management_system.jwt.JwtTokenProvider;
 
@@ -13,6 +14,7 @@ import backend.event_management_system.service.UsersService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -34,14 +36,15 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(path = {"/events"})
 @CrossOrigin(origins = "http://localhost:3000")
+@RequiredArgsConstructor
 public class EventsController {
 
     private final EventsService eventsService;
-    private final UsersService usersService;
     private final JwtTokenProvider jwtTokenProvider;
     private final S3Service s3Service;
 
@@ -49,12 +52,6 @@ public class EventsController {
         return LocalDateTime.ofInstant(Instant.parse(eventDate), ZoneId.of("UTC"));
     }
 
-    public EventsController(EventsService eventsService, UsersService usersService, JwtTokenProvider jwtTokenProvider, S3Service s3Service) {
-        this.eventsService = eventsService;
-        this.usersService = usersService;
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.s3Service = s3Service;
-    }
 
 
     @GetMapping(path = {"/authenticated-basic-user"})
@@ -63,15 +60,15 @@ public class EventsController {
     }
 
     @GetMapping(path = {"/home"})
-    public ResponseEntity<List<Events>> getApprovedEvents(
+    public ResponseEntity<List<EventsDto>> getApprovedEvents(
             @RequestParam Optional<FilteredEvents> filteredEvents) {
-        return ResponseEntity.ok(eventsService.getApprovedEvents(filteredEvents));
+        return ResponseEntity.ok(eventsService.getApprovedEvents(filteredEvents).stream().map(eventsService::getEventsDto).collect(Collectors.toList()));
     }
 
 
     @GetMapping("/{eventId}")
-    public Events getEventById(@PathVariable Long eventId){
-        return eventsService.getEventById(eventId);
+    public EventsDto getEventById(@PathVariable Long eventId){
+            return eventsService.getEventsDto(eventsService.getEventById(eventId));
     }
 
     @GetMapping("/publisher/{tokenEmail}")

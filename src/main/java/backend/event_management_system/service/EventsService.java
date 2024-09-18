@@ -1,6 +1,7 @@
 package backend.event_management_system.service;
 
 import backend.event_management_system.constant.EventsSpecialFiltering;
+import backend.event_management_system.dto.EventsDto;
 import backend.event_management_system.models.EventTicketTypes;
 import backend.event_management_system.models.Events;
 import backend.event_management_system.repository.EventsRepository;
@@ -58,6 +59,27 @@ public class EventsService implements EventServiceInterface {
         return null;
     }
 
+    public EventsDto getEventsDto(Events event){
+        return  EventsDto.builder()
+                .id(event.getId())
+                .eventName(event.getEventName())
+                .eventCategory(event.getEventCategory())
+                .eventDescription(event.getEventDescription())
+                .isFreeEvent(event.isFreeEvent())
+                .eventCurrency(event.getEventCurrency())
+                .eventDate(event.getEventDate())
+                .addressLocation(event.getAddressLocation())
+                .googleMapsUrl(event.getGoogleMapsUrl())
+                .eventImages(event.getEventImages())
+                .eventVideo(event.getEventVideo())
+                .ticketTypes(event.getTicketTypes())
+                .totalTickets(event.getTotalTickets())
+                .isApproved(event.isApproved())
+                .eventCreationDate(event.getEventCreationDate())
+                .eventManagerUsername(event.getEventManagerUsername())
+                .build();
+
+    }
 
     @Override
     public List<Events> getEventsByUsername(String publisherEmail) {
