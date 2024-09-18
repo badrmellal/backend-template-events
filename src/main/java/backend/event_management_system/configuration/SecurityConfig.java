@@ -36,7 +36,7 @@ public class SecurityConfig {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeHttpRequests()
-                .requestMatchers( "/events/home", "api/support/create-ticket", "api/support/user/tickets", "/user/register", "user/verify", "user/login").permitAll()
+                .requestMatchers( "/events/home", "api/support/create-ticket", "api/support/user/tickets", "/user/register", "user/verify", "user/login","/events/**").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .exceptionHandling()

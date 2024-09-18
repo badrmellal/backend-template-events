@@ -1,5 +1,6 @@
 package backend.event_management_system.controller;
 
+import backend.event_management_system.dto.TicketsDto;
 import backend.event_management_system.exceptions.EmailNotFoundException;
 import backend.event_management_system.jwt.JwtTokenProvider;
 import backend.event_management_system.models.*;
@@ -33,7 +34,7 @@ public class TicketsController {
 
     @PostMapping("/purchase/{eventId}")
     @PreAuthorize("hasAuthority('event:read')")
-    public ResponseEntity<Tickets> purchaseTicket(@RequestHeader("Authorization") String token,
+    public ResponseEntity<TicketsDto> purchaseTicket(@RequestHeader("Authorization") String token,
                                                   @PathVariable Long eventId,
                                                   @RequestParam int quantity,
                                                   @RequestParam String ticketTypeName,
@@ -47,7 +48,15 @@ public class TicketsController {
         }
         try {
             Tickets ticket = ticketsService.purchaseTicket(user, event, ticketTypeName, quantity, paymentMethod, promoCode);
-            return ResponseEntity.ok(ticket);
+            TicketsDto ticketsDto = TicketsDto.builder()
+                    .isTicketActive(ticket.isTicketActive())
+                    .fees(ticket.getFees())
+                    .vat(ticket.getVat())
+                    .totalAmount(ticket.getTotalAmount())
+                    .quantity(ticket.getQuantity())
+                    .ticketTypeId(ticket.getId().getTicketTypeId())
+                    .build();
+            return ResponseEntity.ok(ticketsDto);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(null);
         }

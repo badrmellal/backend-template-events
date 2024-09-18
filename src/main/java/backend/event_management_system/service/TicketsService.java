@@ -5,25 +5,25 @@ import backend.event_management_system.models.*;
 import backend.event_management_system.repository.EventsRepository;
 import backend.event_management_system.repository.TicketsRepository;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import static backend.event_management_system.constant.TicketSequenceGenerator.generateSequenceNumber;
 
 @Service
+@RequiredArgsConstructor
 public class TicketsService implements TicketServiceInterface {
 
     private final TicketsRepository ticketsRepository;
     private final EventsRepository eventsRepository;
+    private final EventsService eventsService;
 
-    public TicketsService(TicketsRepository ticketsRepository, EventsRepository eventsRepository) {
-        this.ticketsRepository = ticketsRepository;
-        this.eventsRepository = eventsRepository;
-    }
 
     @Override
     @Transactional
@@ -46,7 +46,9 @@ public class TicketsService implements TicketServiceInterface {
         if (promoCode != null && !promoCode.isEmpty()) {
             totalAmount = applyPromoCode(totalAmount, promoCode);
         }
-
+        ArrayList<String> image = new ArrayList<>();
+        image.add("https://africa-events.s3.eu-west-3.amazonaws.com/created-event/Partyyy_20240918112954.jpeg");
+        event.setEventImages(image);
         String sequenceNumber = TicketSequenceGenerator.generateSequenceNumber();
         TicketId ticketId = new TicketId(event.getId(), ticketType.getTicketTypeId(), sequenceNumber);
         Tickets ticket = new Tickets();

@@ -182,7 +182,7 @@ public class EventsService implements EventServiceInterface {
         return events;
     }
 
-    private Events processEventUrls(Events event) {
+    protected Events processEventUrls(Events event) {
         List<String> presignedUrls = new ArrayList<>();
         for (String imageUrl : event.getEventImages()) {
             String objectKey = extractObjectKeyFromUrl(imageUrl);
