@@ -1,9 +1,14 @@
 package backend.event_management_system.models;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
+@Setter
+@Getter
 public class Tickets {
 
     @EmbeddedId
@@ -59,99 +64,5 @@ public class Tickets {
         return event.getTicketTypeById(id.getTicketTypeId());
     }
 
-    public TicketId getId(){
-        return id;
-    }
-    public void setId(TicketId id) {
-        this.id = id;
-    }
 
-    public Events getEvent() {
-        return event;
-    }
-
-    public void setEvent(Events event) {
-        this.event = event;
-    }
-
-    public Users getUser() {
-        return user;
-    }
-
-    public void setUser(Users user) {
-        this.user = user;
-    }
-
-
-    public LocalDateTime getPurchaseDate() {
-        return purchaseDate;
-    }
-
-    public void setPurchaseDate(LocalDateTime purchaseDate) {
-        this.purchaseDate = purchaseDate;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
-
-    public boolean isTicketActive() {
-        return isTicketActive;
-    }
-
-    public void setTicketActive(boolean ticketActive) {
-        isTicketActive = ticketActive;
-    }
-
-    public float getFees() {
-        return fees;
-    }
-
-    public void setFees(float fees) {
-        this.fees = fees;
-    }
-
-    public float getVat() {
-        return vat;
-    }
-
-    public void setVat(float vat) {
-        this.vat = vat;
-    }
-
-    public float getTotalAmount() {
-        return totalAmount;
-    }
-
-    public void setTotalAmount(float totalAmount) {
-        this.totalAmount = totalAmount;
-    }
-
-    public String getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public void setPaymentMethod(String paymentMethod) {
-        this.paymentMethod = paymentMethod;
-    }
-
-    public PaymentStatus getPaymentStatus() {
-        return paymentStatus;
-    }
-
-    public void setPaymentStatus(PaymentStatus paymentStatus) {
-        this.paymentStatus = paymentStatus;
-    }
-
-    public String getPromoCodeUsed() {
-        return promoCodeUsed;
-    }
-
-    public void setPromoCodeUsed(String promoCodeUsed) {
-        this.promoCodeUsed = promoCodeUsed;
-    }
 }

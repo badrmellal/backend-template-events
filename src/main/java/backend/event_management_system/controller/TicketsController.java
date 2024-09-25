@@ -68,10 +68,12 @@ public class TicketsController {
 
     @GetMapping("/user")
     @PreAuthorize("hasAuthority('event:read')")
-    public ResponseEntity<List<Tickets>> getUserTickets(@RequestHeader("Authorization") String token) throws EmailNotFoundException {
+    public ResponseEntity<List<TicketsDto>> getUserTickets(@RequestHeader("Authorization") String token) throws EmailNotFoundException {
         String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
         Users user = usersService.findUserByEmail(email);
-        List<Tickets> userTickets = ticketsService.getTicketsByUser(user);
+        List<TicketsDto> userTickets = ticketsService.getTicketsByUser(user).stream().map(
+                ticketsService::convertToDto
+        ).toList();
         return ResponseEntity.ok(userTickets);
     }
 
