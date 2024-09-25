@@ -1,6 +1,8 @@
 package backend.event_management_system.controller;
 
+import backend.event_management_system.dto.UsersDto;
 import backend.event_management_system.exceptions.*;
+import backend.event_management_system.jwt.JwtTokenProvider;
 import backend.event_management_system.models.Roles;
 import backend.event_management_system.models.Users;
 import backend.event_management_system.service.UsersService;
@@ -9,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,19 +24,41 @@ import java.util.Optional;
 @RestController
 @RequestMapping(path = {"/user"})
 @CrossOrigin(origins = "http://localhost:3000")
+
 public class UsersController {
 
     private final UsersService usersService;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final VerificationTokenService verificationTokenService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    public UsersController(UsersService usersService, BCryptPasswordEncoder bCryptPasswordEncoder, VerificationTokenService verificationTokenService) {
+    public UsersController(UsersService usersService, JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder bCryptPasswordEncoder, VerificationTokenService verificationTokenService) {
         this.usersService = usersService;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.verificationTokenService = verificationTokenService;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
+    @GetMapping(path = {"/user-info"})
+    public UsersDto getUser(@RequestHeader("Authorization") String token) throws EmailNotFoundException {
+              String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+              Users user = usersService.findUserByEmail(email);
+              return UsersDto.builder()
+                        .id(user.getId())
+                        .username(user.getUsername())
+                        .email(user.getEmail())
+                        .profileImageUrl(user.getProfileImageUrl())
+                        .phoneNumber(user.getPhoneNumber())
+                        .role(user.getRole())
+                        .joinDate(user.getJoinDate())
+                        .lastLoginDate(user.getLastLoginDate())
+                        .lastLoginDateDisplay(user.getLastLoginDateDisplay())
+                        .enabled(user.isEnabled())
+                        .verificationToken(user.getVerificationToken())
+                        .verificationTokenExpiryDate(user.getVerificationTokenExpiryDate())
+                        .build();
+    }
 
     @PostMapping(path = {"/register"})
     public ResponseEntity<?> registerUser(@RequestParam("username") String username,
@@ -130,6 +155,18 @@ public class UsersController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);  // For any other exceptions
         }
     }
+
+    @PutMapping("/update-user-info")
+    public ResponseEntity<UsersDto> updateUserInfo(@RequestBody UsersDto usersDto) {
+        try {
+            System.out.println(usersDto);
+            Users updatedUser = usersService.updateUserInfo(usersDto);
+            return ResponseEntity.status(HttpStatus.OK).build();
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
 
     @DeleteMapping(path = {"/delete/{id}"})
     @PreAuthorize("hasAuthority('user:delete')")

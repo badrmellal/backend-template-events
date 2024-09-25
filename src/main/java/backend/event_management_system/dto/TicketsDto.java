@@ -1,5 +1,6 @@
 package backend.event_management_system.dto;
 
+import backend.event_management_system.models.PaymentStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -12,5 +13,6 @@ public class TicketsDto {
     private float totalAmount;
     private boolean isTicketActive;
     private String ticketTypeId;
+    private PaymentStatus paymentStatus;
 
 }

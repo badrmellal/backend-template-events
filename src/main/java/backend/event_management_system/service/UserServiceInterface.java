@@ -1,5 +1,6 @@
 package backend.event_management_system.service;
 
+import backend.event_management_system.dto.UsersDto;
 import backend.event_management_system.exceptions.*;
 import backend.event_management_system.models.Users;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,4 +22,6 @@ public interface UserServiceInterface {
     Users updateUserRole(Long id, String role) throws EmailNotFoundException;
     void deleteUser(Long id) throws UserNotFoundException;
     Optional<Users> getPublisherInfoFromEmail(String userEmail) throws UsernameNotFoundException;
+
+    Users updateUserInfo( UsersDto usersDto);
 }

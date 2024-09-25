@@ -1,5 +1,6 @@
 package backend.event_management_system.service;
 
+import backend.event_management_system.dto.UsersDto;
 import backend.event_management_system.exceptions.*;
 import backend.event_management_system.jwt.JwtTokenProvider;
 import backend.event_management_system.models.Roles;
@@ -178,6 +179,17 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
     public Optional<Users> getPublisherInfoFromEmail(String userEmail) throws UsernameNotFoundException {
         Optional<Users> user = usersRepository.findUserByEmail(userEmail);
         return user;
+    }
+
+    @Override
+    public Users updateUserInfo(UsersDto usersDto) throws UsernameNotFoundException {
+        Users user = usersRepository.findUserByEmail(usersDto.getEmail())
+                .orElseThrow(() -> new UsernameNotFoundException("This email doesn't exist. Please try again!"));
+        user.setUsername(usersDto.getUsername());
+        user.setCountryCode(usersDto.getCountryCode());
+        user.setPhoneNumber(usersDto.getPhoneNumber());
+        return usersRepository.save(user);
+
     }
 
     private Roles getRoleByName(String roleName){

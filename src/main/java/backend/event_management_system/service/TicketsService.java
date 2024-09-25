@@ -22,8 +22,6 @@ import static backend.event_management_system.constant.TicketSequenceGenerator.g
 public class TicketsService implements TicketServiceInterface {
 
     private final TicketsRepository ticketsRepository;
-    private final EventsRepository eventsRepository;
-    private final EventsService eventsService;
 
 
     @Override
@@ -71,6 +69,7 @@ public class TicketsService implements TicketServiceInterface {
         return ticketsRepository.save(ticket);
     }
 
+    // Convert entity to DTO
     public TicketsDto convertToDto(Tickets ticket) {
         return TicketsDto.builder()
                 .isTicketActive(ticket.isTicketActive())
@@ -79,6 +78,7 @@ public class TicketsService implements TicketServiceInterface {
                 .totalAmount(ticket.getTotalAmount())
                 .quantity(ticket.getQuantity())
                 .ticketTypeId(ticket.getId().getTicketTypeId())
+                .paymentStatus(ticket.getPaymentStatus())
                 .build();
     }
 
