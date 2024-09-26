@@ -62,7 +62,7 @@ public class EventsController {
     @GetMapping(path = {"/home"})
     public ResponseEntity<List<EventsDto>> getApprovedEvents(
             @RequestParam Optional<FilteredEvents> filteredEvents) {
-        return ResponseEntity.ok(eventsService.getApprovedEvents(filteredEvents).stream().map(eventsService::getEventsDto).collect(Collectors.toList()));
+        return ResponseEntity.ok(eventsService.getApprovedEvents(filteredEvents).stream().map(eventsService::getEventsDto).toList());
     }
 
 
@@ -73,8 +73,8 @@ public class EventsController {
 
     @GetMapping("/publisher/{tokenEmail}")
     @PreAuthorize("hasAuthority('event:create')")
-    public List<Events> getEventsByUsername(@PathVariable String tokenEmail){
-        return eventsService.getEventsByUsername(tokenEmail);
+    public List<EventsDto> getEventsByUsername(@PathVariable String tokenEmail){
+        return eventsService.getEventsByUsername(tokenEmail).stream().map(eventsService::getEventsDto).toList();
     }
 
     @GetMapping("/availability/{id}")
@@ -85,7 +85,7 @@ public class EventsController {
 
     @PostMapping("/create")
     @PreAuthorize("hasAuthority('event:create')")
-    public ResponseEntity<Events> createEvent(@RequestHeader("Authorization") String token,
+    public ResponseEntity<EventsDto> createEvent(@RequestHeader("Authorization") String token,
                                               @RequestParam("eventName") String eventName,
                                               @RequestParam("eventCategory") String eventCategory,
                                               @RequestParam("eventDescription") String eventDescription,
@@ -139,12 +139,12 @@ public class EventsController {
                 }
 
                 event.setTicketTypes(ticketTypes);
-        return ResponseEntity.ok(eventsService.createEvent(event));
+        return ResponseEntity.ok(eventsService.getEventsDto(eventsService.createEvent(event)));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('event:update')")
-    public ResponseEntity<Events> updateEvent(@PathVariable Long id,
+    public ResponseEntity<EventsDto> updateEvent(@PathVariable Long id,
                                               @RequestParam("eventName") String eventName,
                                               @RequestParam("eventCategory") String eventCategory,
                                               @RequestParam("eventDescription") String eventDescription,
@@ -193,7 +193,7 @@ public class EventsController {
         List<EventTicketTypes> updatedTicketTypes = objectMapper.readValue(ticketTypesJson, new TypeReference<List<EventTicketTypes>>() {});
 
         Events updated = eventsService.updateEvent(id, updatedEvent, updatedTicketTypes);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(eventsService.getEventsDto(updated));
     }
 
     @DeleteMapping("/{eventId}")
@@ -234,20 +234,20 @@ public class EventsController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Events>> getAllEvents(
+    public ResponseEntity<List<EventsDto>> getAllEvents(
             @RequestParam Optional<FilteredEvents> filteredEvents) {
-        return ResponseEntity.ok(eventsService.getAllEvents(filteredEvents));
+        return ResponseEntity.ok(eventsService.getAllEvents(filteredEvents).stream().map(eventsService::getEventsDto).toList());
     }
 
     @GetMapping("/pending")
     @PreAuthorize("hasAuthority('event:create')")
-    public ResponseEntity<List<Events>> getEventsPendingApproval() {
-        return ResponseEntity.ok(eventsService.getEventsPendingApproval());
+    public ResponseEntity<List<EventsDto>> getEventsPendingApproval() {
+        return ResponseEntity.ok(eventsService.getEventsPendingApproval().stream().map(eventsService::getEventsDto).toList());
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<Events>> searchEvents(
+    public ResponseEntity<List<EventsDto>> searchEvents(
             @RequestParam String keyword) {
-        return ResponseEntity.ok(eventsService.searchEvents(keyword));
+        return ResponseEntity.ok(eventsService.searchEvents(keyword).stream().map(eventsService::getEventsDto).toList());
     }
 }
