@@ -40,4 +40,20 @@ public class EmailService {
             return false;
         }
     }
+
+    public boolean sendOrganizationInvitationEmail(String to, String organizationName, String token) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("noreply@showtimeafrica.com");
+            message.setTo(to);
+            message.setSubject("Invitation to Join " + organizationName);
+            message.setText("You have been invited to join " + organizationName + " on Showtime Africa. "
+                    + "Click the link below to accept the invitation:\n"
+                    + "http://localhost:8080/organization/accept-invitation?token=" + token);
+            mailSender.send(message);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }
