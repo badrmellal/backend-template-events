@@ -96,6 +96,11 @@ public class Users implements Serializable, UserDetails {
             return Roles.ROLE_PUBLISHER.getAuthorities();
         } else if (role.equals(Roles.ROLE_BASIC_USER.name())) {
             return Roles.ROLE_BASIC_USER.getAuthorities();
+        } else if (role.equals(Roles.ROLE_ORGANIZATION_MEMBER.name())) {
+            return Roles.ROLE_ORGANIZATION_MEMBER.getAuthorities();
+        } else if (role.equals(Roles.ROLE_ORGANIZATION_OWNER.name())) {
+            return Roles.ROLE_ORGANIZATION_OWNER.getAuthorities();
+
         } else {
             throw new IllegalArgumentException("Invalid role: " + role);
         }

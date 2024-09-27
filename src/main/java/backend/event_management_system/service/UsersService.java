@@ -64,7 +64,7 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
             user.setRole(role.name());
             user.setAuthorities(role.getAuthorities());
             user.setProfileImageUrl(getTemporaryProfileImageUrl());
-        user.setEnabled(false);
+            user.setEnabled(false);
 
             usersRepository.save(user);
 
