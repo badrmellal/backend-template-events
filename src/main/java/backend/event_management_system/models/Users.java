@@ -44,6 +44,11 @@ public class Users implements Serializable, UserDetails {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Tickets> tickets = new HashSet<>();
 
+    @OneToOne(mappedBy = "owner")
+    private Organization ownedOrganization;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<OrganizationMembership> memberships = new HashSet<>();
 
     public void setRole(String role) {
         this.role = role;
