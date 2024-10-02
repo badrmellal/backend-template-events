@@ -40,8 +40,8 @@ public class OrganizationService {
     }
 
     public Organization createOrganization(Users owner, String firstName, String lastName, String jobTitle, String organizationName, String organizationAddress,
-                                           String organizationCity, String organizationCountry, String phoneNumber,
-                                           String businessCategory, String companyRegistrationNumber) throws Exception {
+                                           String organizationCity, String country, String phoneNumber,
+                                           String businessCategory, String registrationNumber) throws Exception {
         if (organizationRepository.findByOrganizationName(organizationName).isPresent()) {
             throw new Exception("An organization with this name already exists");
         }
@@ -54,10 +54,10 @@ public class OrganizationService {
         organization.setOrganizationName(organizationName);
         organization.setOrganizationAddress(organizationAddress);
         organization.setOrganizationCity(organizationCity);
-        organization.setOrganizationCountry(organizationCountry);
+        organization.setCountry(country);
         organization.setPhoneNumber(phoneNumber);
         organization.setBusinessCategory(businessCategory);
-        organization.setCompanyRegistrationNumber(companyRegistrationNumber);
+        organization.setRegistrationNumber(registrationNumber);
 
         owner.setRole(Roles.ROLE_ORGANIZATION_OWNER.name());
         owner.setAuthorities(Roles.ROLE_ORGANIZATION_OWNER.getAuthorities());
@@ -165,7 +165,7 @@ public class OrganizationService {
     }
 
     public Organization updateOrganization(Long organizationId, String organizationName, String organizationAddress,
-                                           String organizationCity, String organizationCountry, String phoneNumber,
+                                           String organizationCity, String country, String phoneNumber,
                                            String businessCategory, String companyRegistrationNumber) throws Exception {
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new Exception("Organization not found"));
@@ -173,10 +173,10 @@ public class OrganizationService {
         organization.setOrganizationName(organizationName);
         organization.setOrganizationAddress(organizationAddress);
         organization.setOrganizationCity(organizationCity);
-        organization.setOrganizationCountry(organizationCountry);
+        organization.setCountry(country);
         organization.setPhoneNumber(phoneNumber);
         organization.setBusinessCategory(businessCategory);
-        organization.setCompanyRegistrationNumber(companyRegistrationNumber);
+        organization.setRegistrationNumber(companyRegistrationNumber);
 
         return organizationRepository.save(organization);
     }

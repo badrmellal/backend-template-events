@@ -1,12 +1,11 @@
 package backend.event_management_system.service;
 
+import backend.event_management_system.dto.EventsDto;
+import backend.event_management_system.exceptions.EmailNotFoundException;
 import backend.event_management_system.models.EventTicketTypes;
 import backend.event_management_system.models.Events;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 public interface EventServiceInterface {
@@ -14,7 +13,7 @@ public interface EventServiceInterface {
     List<Events> searchEvents(String keyword);
     List<Events> getApprovedEvents(Optional<FilteredEvents> filteredEvents);
     Events getEventById(Long id);
-    List<Events> getEventsByUsername(String PublisherEmail);
+    List<EventsDto> getEventsByUsername(String PublisherEmail) throws EmailNotFoundException;
     boolean checkEventAvailability(Long eventId);
 
 

@@ -12,8 +12,8 @@ public class OrganizationDto {
     private String organizationName;
     private String organizationAddress;
     private String organizationCity;
-    private String organizationCountry;
+    private String country;
     private String phoneNumber;
     private String businessCategory;
-    private String companyRegistrationNumber;
+    private String registrationNumber;
 }
