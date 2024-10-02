@@ -14,5 +14,5 @@ public interface TicketsRepository extends JpaRepository<Tickets, TicketId> {
     int countByEvent(Events event);
     List<Tickets> findByUserAndEvent(Users user, Events event);
     List<Tickets> findByPaymentStatus(PaymentStatus paymentStatus);
-
+    List<Tickets> findByEventId(Long id);
 }

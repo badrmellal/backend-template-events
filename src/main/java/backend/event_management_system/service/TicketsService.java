@@ -1,12 +1,15 @@
 package backend.event_management_system.service;
 
 import backend.event_management_system.constant.TicketSequenceGenerator;
+import backend.event_management_system.dto.EventsDto;
 import backend.event_management_system.dto.TicketsDto;
+import backend.event_management_system.dto.UsersDto;
 import backend.event_management_system.models.*;
 import backend.event_management_system.repository.EventsRepository;
 import backend.event_management_system.repository.TicketsRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +25,18 @@ import static backend.event_management_system.constant.TicketSequenceGenerator.g
 public class TicketsService implements TicketServiceInterface {
 
     private final TicketsRepository ticketsRepository;
+
+    @Transactional
+    public List<TicketsDto> getTicketsByEvents(List<EventsDto> events) {
+        List<Tickets> tickets = new ArrayList<>();
+        for (EventsDto event : events) {
+            tickets.addAll(ticketsRepository.findByEventId(event.getId()));
+        }
+
+        return tickets.stream()
+                .map(this::convertToDto)
+                .toList();
+    }
 
 
     @Override
@@ -71,14 +86,31 @@ public class TicketsService implements TicketServiceInterface {
 
     // Convert entity to DTO
     public TicketsDto convertToDto(Tickets ticket) {
+        UsersDto usersDto = UsersDto.builder()
+                .id(ticket.getUser().getId())
+                .username(ticket.getUser().getUsername())
+                .email(ticket.getUser().getEmail())
+                .build();
+        EventsDto eventsDto = EventsDto.builder()
+                .id(ticket.getEvent().getId())
+                .eventName(ticket.getEvent().getEventName())
+                .eventDescription(ticket.getEvent().getEventDescription())
+                .eventDate(ticket.getEvent().getEventDate())
+//                .eventImages(List.of())
+                .build();
+        EventTicketTypes eve = ticket.getTicketType();
         return TicketsDto.builder()
+                .id(ticket.getId().getSequenceNumber())
                 .isTicketActive(ticket.isTicketActive())
                 .fees(ticket.getFees())
                 .vat(ticket.getVat())
                 .totalAmount(ticket.getTotalAmount())
                 .quantity(ticket.getQuantity())
-                .ticketTypeId(ticket.getId().getTicketTypeId())
+                .ticketType(eve.getName())
                 .paymentStatus(ticket.getPaymentStatus())
+                .usersDto(usersDto)
+                .purchaseDate(ticket.getPurchaseDate())
+                .eventsDto(eventsDto)
                 .build();
     }
 
@@ -162,6 +194,12 @@ public class TicketsService implements TicketServiceInterface {
                 .findFirst()
                 .map(tt -> tt.getTotalTickets() - tt.getSoldTickets() >= quantityRequested)
                 .orElse(false);
+    }
+
+    @Override
+    public List<Tickets> getTicketsDetails(User user) {
+
+        return List.of();
     }
 
     @Override

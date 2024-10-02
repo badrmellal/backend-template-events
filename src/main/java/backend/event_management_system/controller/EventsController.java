@@ -6,37 +6,26 @@ import backend.event_management_system.jwt.JwtTokenProvider;
 
 import backend.event_management_system.models.EventTicketTypes;
 import backend.event_management_system.models.Events;
-import backend.event_management_system.models.Users;
 import backend.event_management_system.service.EventsService;
 import backend.event_management_system.service.FilteredEvents;
 import backend.event_management_system.service.S3Service;
-import backend.event_management_system.service.UsersService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
+
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
-import java.util.stream.Collectors;
+
 
 @RestController
 @RequestMapping(path = {"/events"})
@@ -73,8 +62,8 @@ public class EventsController {
 
     @GetMapping("/publisher/{tokenEmail}")
     @PreAuthorize("hasAuthority('event:create')")
-    public List<EventsDto> getEventsByUsername(@PathVariable String tokenEmail){
-        return eventsService.getEventsByUsername(tokenEmail).stream().map(eventsService::getEventsDto).toList();
+    public List<EventsDto> getEventsByUsername(@PathVariable String tokenEmail) throws EmailNotFoundException {
+        return eventsService.getEventsByUsername(tokenEmail);
     }
 
     @GetMapping("/availability/{id}")

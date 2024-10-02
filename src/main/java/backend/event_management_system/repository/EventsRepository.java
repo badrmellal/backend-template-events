@@ -1,6 +1,7 @@
 package backend.event_management_system.repository;
 
 import backend.event_management_system.models.Events;
+import backend.event_management_system.models.Users;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

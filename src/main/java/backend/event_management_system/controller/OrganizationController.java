@@ -46,7 +46,6 @@ public class OrganizationController {
             String token = getTokenFromRequest(request);
             String email = jwtTokenProvider.getEmailFromToken(token);
             Users owner = usersService.findUserByEmail(email);
-
             Organization organization = organizationService.createOrganization(
                     owner,
                     organizationDetails.getFirstName(),
@@ -55,10 +54,10 @@ public class OrganizationController {
                     organizationDetails.getOrganizationName(),
                     organizationDetails.getOrganizationAddress(),
                     organizationDetails.getOrganizationCity(),
-                    organizationDetails.getOrganizationCountry(),
+                    organizationDetails.getCountry(),
                     organizationDetails.getPhoneNumber(),
                     organizationDetails.getBusinessCategory(),
-                    organizationDetails.getCompanyRegistrationNumber()
+                    organizationDetails.getRegistrationNumber()
             );
 
             return new ResponseEntity<>(organization, HttpStatus.CREATED);
@@ -239,7 +238,7 @@ public class OrganizationController {
                     organizationDetails.get("organizationCountry"),
                     organizationDetails.get("phoneNumber"),
                     organizationDetails.get("businessCategory"),
-                    organizationDetails.get("companyRegistrationNumber")
+                    organizationDetails.get("registrationNumber")
             );
 
             return new ResponseEntity<>(updatedOrganization, HttpStatus.OK);

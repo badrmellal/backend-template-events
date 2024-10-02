@@ -7,16 +7,12 @@ import backend.event_management_system.models.Events;
 import backend.event_management_system.repository.EventsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class EventsService implements EventServiceInterface {
@@ -78,28 +74,27 @@ public class EventsService implements EventServiceInterface {
                 .eventCreationDate(event.getEventCreationDate())
                 .eventManagerUsername(event.getEventManagerUsername())
                 .build();
-
     }
 
     @Override
-    public List<Events> getEventsByUsername(String publisherEmail) {
+    public List<EventsDto> getEventsByUsername(String publisherEmail) {
         List<Events> events = eventsRepository.findByEventManagerUsername(publisherEmail);
-        for (Events event : events) {
-            List<String> presignedUrls = new ArrayList<>();
-            for (String imageUrl : event.getEventImages()) {
-                String objectKey = extractObjectKeyFromUrl(imageUrl);
-                String presignedUrl = s3Service.generatePresignedUrl(objectKey);
-                presignedUrls.add(presignedUrl);
-            }
-            event.setEventImages(presignedUrls);
-
-            if (event.getEventVideo() != null) {
-                String videoObjectKey = extractObjectKeyFromUrl(event.getEventVideo());
-                String presignedVideoUrl = s3Service.generatePresignedUrl(videoObjectKey);
-                event.setEventVideo(presignedVideoUrl);
-            }
-        }
-        return events;
+//        for (Events event : events) {
+//            List<String> presignedUrls = new ArrayList<>();
+//            for (String imageUrl : event.getEventImages()) {
+//                String objectKey = extractObjectKeyFromUrl(imageUrl);
+//                String presignedUrl = s3Service.generatePresignedUrl(objectKey);
+//                presignedUrls.add(presignedUrl);
+//            }
+//            event.setEventImages(presignedUrls);
+//
+//            if (event.getEventVideo() != null) {
+//                String videoObjectKey = extractObjectKeyFromUrl(event.getEventVideo());
+//                String presignedVideoUrl = s3Service.generatePresignedUrl(videoObjectKey);
+//                event.setEventVideo(presignedVideoUrl);
+//            }
+//        }
+        return events.stream().map(this::getEventsDto).toList();
     }
 
     @Override
