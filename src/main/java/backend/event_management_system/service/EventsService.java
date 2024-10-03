@@ -77,25 +77,17 @@ public class EventsService implements EventServiceInterface {
     }
 
     @Override
-    public List<EventsDto> getEventsByUsername(String publisherEmail) {
+    public List<EventsDto> getEventsByUsername(String publisherEmail, Boolean toProcessUrls) {
         List<Events> events = eventsRepository.findByEventManagerUsername(publisherEmail);
-//        for (Events event : events) {
-//            List<String> presignedUrls = new ArrayList<>();
-//            for (String imageUrl : event.getEventImages()) {
-//                String objectKey = extractObjectKeyFromUrl(imageUrl);
-//                String presignedUrl = s3Service.generatePresignedUrl(objectKey);
-//                presignedUrls.add(presignedUrl);
-//            }
-//            event.setEventImages(presignedUrls);
-//
-//            if (event.getEventVideo() != null) {
-//                String videoObjectKey = extractObjectKeyFromUrl(event.getEventVideo());
-//                String presignedVideoUrl = s3Service.generatePresignedUrl(videoObjectKey);
-//                event.setEventVideo(presignedVideoUrl);
-//            }
-//        }
+        if(!toProcessUrls){
+            return events.stream().map(this::getEventsDto).toList();
+        }
+        for (Events event : events) {
+            event = processEventUrls(event);
+        }
         return events.stream().map(this::getEventsDto).toList();
     }
+
 
     @Override
     public boolean checkEventAvailability(Long eventId) {

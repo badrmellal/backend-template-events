@@ -63,7 +63,7 @@ public class EventsController {
     @GetMapping("/publisher/{tokenEmail}")
     @PreAuthorize("hasAuthority('event:create')")
     public List<EventsDto> getEventsByUsername(@PathVariable String tokenEmail) throws EmailNotFoundException {
-        return eventsService.getEventsByUsername(tokenEmail);
+        return eventsService.getEventsByUsername(tokenEmail, true);
     }
 
     @GetMapping("/availability/{id}")
