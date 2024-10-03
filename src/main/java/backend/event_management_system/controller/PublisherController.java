@@ -33,7 +33,7 @@ public class PublisherController {
     @GetMapping("tickets-details/{publisherEmail}")
     @PreAuthorize("hasAuthority('event:create')")
     public ResponseEntity<List<TicketsDto>> getTicketsDetails(@PathVariable String publisherEmail) throws EmailNotFoundException {
-        List<EventsDto> events = eventsService.getEventsByUsername(publisherEmail);
+        List<EventsDto> events = eventsService.getEventsByUsername(publisherEmail, false);
         List<TicketsDto> tickets = ticketsService.getTicketsByEvents(events);
 
         return ResponseEntity.ok(tickets);

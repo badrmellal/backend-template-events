@@ -13,7 +13,7 @@ public interface EventServiceInterface {
     List<Events> searchEvents(String keyword);
     List<Events> getApprovedEvents(Optional<FilteredEvents> filteredEvents);
     Events getEventById(Long id);
-    List<EventsDto> getEventsByUsername(String PublisherEmail) throws EmailNotFoundException;
+    List<EventsDto> getEventsByUsername(String PublisherEmail,Boolean toProcessUrls) throws EmailNotFoundException;
     boolean checkEventAvailability(Long eventId);
 
 

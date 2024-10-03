@@ -90,13 +90,14 @@ public class TicketsService implements TicketServiceInterface {
                 .id(ticket.getUser().getId())
                 .username(ticket.getUser().getUsername())
                 .email(ticket.getUser().getEmail())
+                .phoneNumber(ticket.getUser().getPhoneNumber())
+                .countryCode(ticket.getUser().getCountryCode())
                 .build();
         EventsDto eventsDto = EventsDto.builder()
                 .id(ticket.getEvent().getId())
                 .eventName(ticket.getEvent().getEventName())
                 .eventDescription(ticket.getEvent().getEventDescription())
                 .eventDate(ticket.getEvent().getEventDate())
-//                .eventImages(List.of())
                 .build();
         EventTicketTypes eve = ticket.getTicketType();
         return TicketsDto.builder()
