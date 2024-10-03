@@ -30,8 +30,8 @@ public class Tickets {
     private LocalDateTime purchaseDate;
     private int quantity;
     private boolean isTicketActive;
-    private float fees;
-    private float vat;
+    private float paymentFees;
+    private float commission;
     private float totalAmount;
     private String paymentMethod;
 
@@ -44,7 +44,7 @@ public class Tickets {
     }
 
     public Tickets(TicketId id, Events event, Users user, LocalDateTime purchaseDate,
-                   int quantity, boolean isTicketActive, float fees, float vat, float totalAmount,
+                   int quantity, boolean isTicketActive, float paymentFees, float commission, float totalAmount,
                    String paymentMethod, PaymentStatus paymentStatus, String promoCodeUsed) {
         this.id = id;
         this.event = event;
@@ -52,8 +52,8 @@ public class Tickets {
         this.purchaseDate = purchaseDate;
         this.quantity = quantity;
         this.isTicketActive = isTicketActive;
-        this.fees = fees;
-        this.vat = vat;
+        this.paymentFees = paymentFees;
+        this.commission = commission;
         this.totalAmount = totalAmount;
         this.paymentMethod = paymentMethod;
         this.paymentStatus = paymentStatus;

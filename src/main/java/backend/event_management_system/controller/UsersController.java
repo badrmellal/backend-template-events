@@ -1,10 +1,13 @@
 package backend.event_management_system.controller;
 
+import backend.event_management_system.dto.InvitedUserRegistDto;
+import backend.event_management_system.dto.LoyaltyProgramDto;
 import backend.event_management_system.dto.UsersDto;
 import backend.event_management_system.exceptions.*;
 import backend.event_management_system.jwt.JwtTokenProvider;
 import backend.event_management_system.models.Roles;
 import backend.event_management_system.models.Users;
+import backend.event_management_system.service.LoyaltyService;
 import backend.event_management_system.service.UsersService;
 import backend.event_management_system.service.VerificationTokenService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +21,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(path = {"/user"})
@@ -31,13 +37,15 @@ public class UsersController {
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final VerificationTokenService verificationTokenService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final LoyaltyService loyaltyService;
 
     @Autowired
-    public UsersController(UsersService usersService, JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder bCryptPasswordEncoder, VerificationTokenService verificationTokenService) {
+    public UsersController(UsersService usersService, JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder bCryptPasswordEncoder, VerificationTokenService verificationTokenService, LoyaltyService loyaltyService) {
         this.usersService = usersService;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.verificationTokenService = verificationTokenService;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.loyaltyService = loyaltyService;
     }
 
     @GetMapping(path = {"/user-info"})
@@ -57,7 +65,9 @@ public class UsersController {
                         .enabled(user.isEnabled())
                         .verificationToken(user.getVerificationToken())
                         .verificationTokenExpiryDate(user.getVerificationTokenExpiryDate())
-                        .build();
+                        .totalTickets(user.getTotalTickets())
+                        .loyaltyPoints(user.getLoyaltyPoints())
+                          .build();
     }
 
     @PostMapping(path = {"/register"})
@@ -124,11 +134,72 @@ public class UsersController {
 
     @GetMapping(path = {"/all-users"})
     @PreAuthorize("hasAuthority('user:delete')")
-    public ResponseEntity<List<Users>> getAllUsers() {
+    public ResponseEntity<List<UsersDto>> getAllUsers() {
 
        List<Users> usersList = usersService.getUsers();
-        return new ResponseEntity<>(usersList, HttpStatus.OK);
+       List<UsersDto> usersDtos = usersList.stream()
+               .map(this::convertToDto)
+               .toList();
+        return ResponseEntity.ok(usersDtos);
     }
+    private UsersDto convertToDto(Users user){
+        return UsersDto.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .profileImageUrl(user.getProfileImageUrl())
+                .phoneNumber(user.getPhoneNumber())
+                .role(user.getRole())
+                .joinDate(user.getJoinDate())
+                .lastLoginDate(user.getLastLoginDate())
+                .lastLoginDateDisplay(user.getLastLoginDateDisplay())
+                .enabled(user.isEnabled())
+                .countryCode(user.getCountryCode())
+                .build();
+    }
+
+    @GetMapping("/loyalty-points")
+    public ResponseEntity<Integer> getLoyaltyPoints(@RequestHeader("Authorization") String token) throws EmailNotFoundException {
+        String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+        Users user = usersService.findUserByEmail(email);
+        int loyaltyPoints = loyaltyService.getLoyaltyPoints(user);
+        return ResponseEntity.ok(loyaltyPoints);
+    }
+
+    @GetMapping("/generate-invite-code")
+    public ResponseEntity<String> generateInviteCode(@RequestHeader("Authorization") String token) throws EmailNotFoundException {
+        String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+        Users user = usersService.findUserByEmail(email);
+        String inviteCode = loyaltyService.generateInviteCode(user);
+        return ResponseEntity.ok(inviteCode);
+    }
+
+    @GetMapping("/validate-invite/{code}")
+    public ResponseEntity<Map<String, Boolean>> validateInviteCode(@PathVariable String code) {
+        boolean isValid = usersService.validateInviteCode(code);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("valid", isValid);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/register-invited")
+    public ResponseEntity<?> registerInvitedUser(@RequestBody InvitedUserRegistDto registrationDto) {
+        try {
+            Users newUser = usersService.registerInvitedUser(registrationDto);
+            return new ResponseEntity<>("Registration successful. Please check your email to verify your account.", HttpStatus.CREATED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("/loyalty-program")
+    public ResponseEntity<LoyaltyProgramDto> getLoyaltyProgram(@RequestHeader("Authorization") String token) throws EmailNotFoundException {
+        String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+        Users user = usersService.findUserByEmail(email);
+        LoyaltyProgramDto loyaltyProgram = loyaltyService.getLoyaltyProgram(user);
+        return ResponseEntity.ok(loyaltyProgram);
+    }
+
 
     @GetMapping(path = {"/admin-username/{adminEmail}"})
     @PreAuthorize("hasAuthority('user:delete')")
@@ -145,14 +216,18 @@ public class UsersController {
 
     @PutMapping(path = {"/update-role/{id}"})
     @PreAuthorize("hasAuthority('user:delete')")
-    public ResponseEntity<Users> updateRole(@PathVariable Long id, @RequestParam String assignedRole) throws EmailNotFoundException {
+    public ResponseEntity<Users> updateUser(@PathVariable Long id,
+                                            @RequestParam String assignedRole,
+                                            @RequestParam(required = false) String phoneNumber,
+                                            @RequestParam(required = false) String countryCode,
+                                            @RequestParam boolean enabled) {
         try {
-            Users user = usersService.updateUserRole(id, assignedRole);
+            Users user = usersService.updateUser(id, assignedRole, phoneNumber, countryCode, enabled);
             return new ResponseEntity<>(user, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);  // If the role is invalid
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);  // For any other exceptions
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -167,6 +242,13 @@ public class UsersController {
         }
     }
 
+    @GetMapping("/user-total-tickets")
+    @PreAuthorize("hasAuthority('event:read')")
+    public ResponseEntity<Integer> getUserTotalTickets(@RequestHeader("Authorization") String token) throws EmailNotFoundException {
+        String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+        Users user = usersService.findUserByEmail(email);
+        return ResponseEntity.ok(user.getTotalTickets());
+    }
 
     @DeleteMapping(path = {"/delete/{id}"})
     @PreAuthorize("hasAuthority('user:delete')")

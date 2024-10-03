@@ -14,6 +14,8 @@ public class VerificationTokenService {
 
     @Autowired
     private UsersRepository userRepository;
+    @Autowired
+    private LoyaltyService loyaltyService;
 
     public String generateVerificationToken() {
         return UUID.randomUUID().toString();
@@ -33,6 +35,12 @@ public class VerificationTokenService {
         user.setEnabled(true);
         user.setVerificationToken(null);
         user.setVerificationTokenExpiryDate(null);
+        // adding loyalty points before saving the user
+        Users inviter = user.getInvitedBy();
+        if (inviter != null) {
+            loyaltyService.addInviterLoyaltyPoints(inviter);
+        }
+
         userRepository.save(user);
         return user;
     }

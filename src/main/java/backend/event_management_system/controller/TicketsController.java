@@ -6,6 +6,7 @@ import backend.event_management_system.jwt.JwtTokenProvider;
 import backend.event_management_system.models.*;
 import backend.event_management_system.repository.EventsRepository;
 import backend.event_management_system.service.EventsService;
+import backend.event_management_system.service.LoyaltyService;
 import backend.event_management_system.service.TicketsService;
 import backend.event_management_system.service.UsersService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class TicketsController {
     private final JwtTokenProvider jwtTokenProvider;
     private final EventsRepository eventsRepository;
     private final EventsService eventsService;
-
+    private final LoyaltyService loyaltyService;
 
     @PostMapping("/purchase/{eventId}")
     @PreAuthorize("hasAuthority('event:read')")
@@ -48,6 +49,19 @@ public class TicketsController {
         }
         try {
             Tickets ticket = ticketsService.purchaseTicket(user, event, ticketTypeName, quantity, paymentMethod, promoCode);
+            // Applying loyalty discount
+            float discountPercentage = loyaltyService.getDiscountPercentage(user);
+            float originalPrice = ticket.getTotalAmount();
+            float discountedPrice = originalPrice * (1 - discountPercentage);
+            ticket.setTotalAmount(discountedPrice);
+
+            // Adding loyalty points
+            loyaltyService.addLoyaltyPoints(user, discountedPrice);
+
+            // Adding ticket to user's tickets set
+            user.addTicket(ticket);
+            usersService.saveUser(user);
+
             TicketsDto ticketsDto = ticketsService.convertToDto(ticket);
             return ResponseEntity.ok(ticketsDto);
         } catch (RuntimeException e) {
@@ -149,6 +163,16 @@ public class TicketsController {
         List<Tickets> tickets = ticketsService.getTicketsByUserAndEvent(user, event);
         return ResponseEntity.ok(tickets);
     }
+
+    @GetMapping("/user-loyalty-discount")
+    @PreAuthorize("hasAuthority('event:read')")
+    public ResponseEntity<Double> getUserLoyaltyDiscount(@RequestHeader("Authorization") String token) throws EmailNotFoundException {
+        String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+        Users user = usersService.findUserByEmail(email);
+        double discountPercentage = loyaltyService.getDiscountPercentage(user);
+        return ResponseEntity.ok(discountPercentage);
+    }
+
 
     @DeleteMapping
     @PreAuthorize("hasAuthority('event:approve')")

@@ -21,4 +21,6 @@ public class UsersDto {
     private String verificationToken;
     private Date verificationTokenExpiryDate;
     private String countryCode;
+    private int totalTickets;
+    private int loyaltyPoints;
 }

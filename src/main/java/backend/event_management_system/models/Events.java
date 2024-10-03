@@ -27,6 +27,7 @@ public class Events {
     private String eventManagerUsername;
     private LocalDateTime eventDate;
     private String addressLocation;
+    @Column(length = 1000)
     private String googleMapsUrl;
     private boolean isApproved;
     @Temporal(TemporalType.TIMESTAMP)

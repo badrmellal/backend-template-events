@@ -14,6 +14,8 @@ public class TicketsDto {
     private String id;
     private float fees;
     private float vat;
+    private float paymentFees;
+    private float commission;
     private float totalAmount;
     private boolean isTicketActive;
     private String ticketType;

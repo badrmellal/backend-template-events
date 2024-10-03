@@ -1,5 +1,6 @@
 package backend.event_management_system.service;
 
+import backend.event_management_system.constant.FeesCalculator;
 import backend.event_management_system.constant.TicketSequenceGenerator;
 import backend.event_management_system.dto.EventsDto;
 import backend.event_management_system.dto.TicketsDto;
@@ -51,11 +52,14 @@ public class TicketsService implements TicketServiceInterface {
             throw new RuntimeException("Not enough tickets available for this ticket type.");
         }
 
-        float ticketPrice = ticketType.getPrice();
-        float subtotal = ticketPrice * quantity;
-        float fees = calculateFees(subtotal);
-        float vat = calculateVAT(subtotal + fees);
-        float totalAmount = subtotal + fees + vat;
+        double ticketPrice = ticketType.getPrice();
+        boolean isOrganization = user.isOrganization();
+        String currencyCode = event.getEventCurrency();
+
+        FeesCalculator.FeeCalculationResult feeResult = FeesCalculator.calculateFeesAndCommission(
+                ticketPrice, quantity, isOrganization, currencyCode);
+
+        float totalAmount = (float) feeResult.totalToCharge;
 
         if (promoCode != null && !promoCode.isEmpty()) {
             totalAmount = applyPromoCode(totalAmount, promoCode);
@@ -70,12 +74,13 @@ public class TicketsService implements TicketServiceInterface {
         ticket.setQuantity(quantity);
         ticket.setPurchaseDate(LocalDateTime.now());
         ticket.setTicketActive(true);
-        ticket.setFees(fees);
-        ticket.setVat(vat);
+        ticket.setPaymentFees((float) feeResult.stripeFee);
+        ticket.setCommission((float) feeResult.commission);
         ticket.setTotalAmount(totalAmount);
         ticket.setPaymentMethod(paymentMethod);
         ticket.setPaymentStatus(PaymentStatus.PENDING);
         ticket.setPromoCodeUsed(promoCode);
+
 
         // Update ticket type's sold tickets
         ticketType.setSoldTickets(ticketType.getSoldTickets() + quantity);
@@ -103,8 +108,8 @@ public class TicketsService implements TicketServiceInterface {
         return TicketsDto.builder()
                 .id(ticket.getId().getSequenceNumber())
                 .isTicketActive(ticket.isTicketActive())
-                .fees(ticket.getFees())
-                .vat(ticket.getVat())
+                .paymentFees(ticket.getPaymentFees())
+                .commission(ticket.getCommission())
                 .totalAmount(ticket.getTotalAmount())
                 .quantity(ticket.getQuantity())
                 .ticketType(eve.getName())
@@ -129,10 +134,6 @@ public class TicketsService implements TicketServiceInterface {
         return subtotal * 0.05f; // Example: 5% fee
     }
 
-    private float calculateVAT(float amount) {
-        // Implement your VAT calculation logic here
-        return amount * 0.15f; // Example: 15% VAT
-    }
 
     private float applyPromoCode(float totalAmount, String promoCode) {
         // Implement your promo code logic here

@@ -10,6 +10,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -50,18 +51,34 @@ public class Users implements Serializable, UserDetails {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrganizationMembership> memberships = new HashSet<>();
 
+    private boolean isOrganization = false;
+
+    @Column(name = "loyalty_points")
+    private int loyaltyPoints = 0;
+
+    @Column(name = "invite_code", unique = true)
+    private String inviteCode;
+    @ManyToOne
+    @JoinColumn(name = "invited_by", nullable = true)
+    private Users invitedBy;
+
+    @Column(name = "total_spend")
+    private double totalSpend = 0;
+
+
+
+
+
     public void setRole(String role) {
         this.role = role;
         // automatically update the authorities based on the role
         this.authorities = getAuthoritiesForRole(role);
     }
 
-
     @Override
     public boolean isEnabled() {
         return this.enabled;
     }
-
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -86,6 +103,20 @@ public class Users implements Serializable, UserDetails {
     @Override
     public boolean isAccountNonLocked() {
         return UserDetails.super.isAccountNonLocked();
+    }
+
+    public int getTotalTickets() {
+        return this.tickets.size();
+    }
+
+    public void addTicket(Tickets ticket) {
+        this.tickets.add(ticket);
+        ticket.setUser(this);
+    }
+
+    public void removeTicket(Tickets ticket) {
+        this.tickets.remove(ticket);
+        ticket.setUser(null);
     }
 
 

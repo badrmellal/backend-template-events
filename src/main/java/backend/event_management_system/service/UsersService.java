@@ -1,5 +1,6 @@
 package backend.event_management_system.service;
 
+import backend.event_management_system.dto.InvitedUserRegistDto;
 import backend.event_management_system.dto.UsersDto;
 import backend.event_management_system.exceptions.*;
 import backend.event_management_system.jwt.JwtTokenProvider;
@@ -97,6 +98,9 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
         Authentication auth = authenticationManager
                 .authenticate(new UsernamePasswordAuthenticationToken(email, password));
         SecurityContextHolder.getContext().setAuthentication(auth);
+        usersRepository.findUserByEmail(email).get().setLastLoginDate(new Date());
+        usersRepository.save(user);
+
         loginAttemptService.removeUserFromLoginAttemptCache(email);
 
         return jwtTokenProvider.generateToken(auth);
@@ -161,11 +165,15 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
     }
 
     @Override
-    public Users updateUserRole(Long id, String assignedRole) throws EmailNotFoundException {
-         Users user = usersRepository.getReferenceById(id);
-         user.setRole(assignedRole);
-        usersRepository.save(user);
-        return user;
+    public Users updateUser(Long id, String assignedRole, String phoneNumber, String countryCode, boolean enabled) {
+        Users user = usersRepository.getReferenceById(id);
+        user.setRole(assignedRole);
+        user.setPhoneNumber(phoneNumber);
+        user.setCountryCode(countryCode);
+        user.setEnabled(enabled);
+         usersRepository.save(user);
+
+         return user;
     }
 
     @Override
@@ -218,5 +226,52 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
         if (userByEmail != null && !userByEmail.getEmail().equals(currentUsername)) {
             throw new EmailExistException("Email already exists");
         }
+    }
+
+    public boolean validateInviteCode(String code) {
+        return usersRepository.findByInviteCode(code).isPresent();
+    }
+
+    public Users getInviterByCode(String code) {
+        return usersRepository.findByInviteCode(code).orElse(null);
+    }
+
+    @Transactional
+    public Users registerInvitedUser(InvitedUserRegistDto registrationDto) throws Exception {
+        if (!validateInviteCode(registrationDto.getInviteCode())) {
+            throw new Exception("Invalid invite code");
+        }
+        Users inviter = getInviterByCode(registrationDto.getInviteCode());
+        if (inviter == null) {
+            throw new Exception("Inviter not found");
+        }
+
+        if (usersRepository.existsByEmail(registrationDto.getEmail())) {
+            throw new EmailExistException("Email already exists");
+        }
+
+        if (usersRepository.existsByUsername(registrationDto.getUsername())) {
+            throw new UsernameExistException("Username already exists");
+        }
+
+        Users newUser = new Users();
+        newUser.setUsername(registrationDto.getUsername());
+        newUser.setEmail(registrationDto.getEmail());
+        newUser.setUserPassword(bCryptPasswordEncoder.encode(registrationDto.getPassword()));
+        newUser.setRole(Roles.ROLE_BASIC_USER.name());
+        newUser.setEnabled(false); // User is not enabled until email is verified
+        newUser.setJoinDate(new Date());
+        newUser.setInvitedBy(inviter);
+
+        Users savedUser = usersRepository.save(newUser);
+
+        String verificationToken = verificationTokenService.generateVerificationToken();
+        verificationTokenService.createVerificationToken(savedUser, verificationToken);
+
+        return savedUser;
+    }
+
+    public void saveUser(Users user) {
+        usersRepository.save(user);
     }
 }
