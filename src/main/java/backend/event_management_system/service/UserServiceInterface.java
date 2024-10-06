@@ -25,4 +25,5 @@ public interface UserServiceInterface {
     void saveUser(Users user);
     Users updateUser(Long id, String assignedRole, String phoneNumber, String countryCode, boolean enabled);
     Users updateUserInfo( UsersDto usersDto);
+
 }

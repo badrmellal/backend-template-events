@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(path = {"/user"})
@@ -254,6 +254,20 @@ public class UsersController {
     @PreAuthorize("hasAuthority('user:delete')")
     public void deleteUser(@PathVariable Long id) throws UserNotFoundException {
         usersService.deleteUser(id);
+    }
+
+    @PostMapping("/update-publisher")
+    public ResponseEntity<UsersDto> updatePublisher(@RequestBody UsersDto userDto) {
+        Users updatedUser = usersService.updatePublisher(userDto);
+        return ResponseEntity.ok(convertToDto(updatedUser));
+    }
+
+    @GetMapping("/publisher-info")
+    @PreAuthorize("hasAuthority('event:create')")
+    public ResponseEntity<UsersDto> getPublisherInfoWithSocials(@RequestHeader("Authorization") String token ) throws EmailNotFoundException {
+        String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+        UsersDto user = usersService.getUserWithSocialLinksByEmail(email);
+        return ResponseEntity.ok(user);
     }
 
 }
