@@ -12,8 +12,6 @@ import java.time.LocalDateTime;
 public class TicketsDto {
     private float quantity;
     private String id;
-    private float fees;
-    private float vat;
     private float paymentFees;
     private float commission;
     private float totalAmount;

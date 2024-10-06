@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.boot.convert.DataSizeUnit;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -42,6 +43,9 @@ public class Users implements Serializable, UserDetails {
     private boolean enabled;
     private String verificationToken;
     private Date verificationTokenExpiryDate;
+    //bio is a short description of the user
+    @Nullable
+    private String bio;
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Tickets> tickets = new HashSet<>();
 
@@ -51,7 +55,9 @@ public class Users implements Serializable, UserDetails {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrganizationMembership> memberships = new HashSet<>();
 
+    @Column(name = "is_organization", nullable = false)
     private boolean isOrganization = false;
+
 
     @Column(name = "loyalty_points")
     private int loyaltyPoints = 0;
@@ -65,6 +71,8 @@ public class Users implements Serializable, UserDetails {
     @Column(name = "total_spend")
     private double totalSpend = 0;
 
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<SocialLinks> socialLinks = new ArrayList<>();
 
 
 

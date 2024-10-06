@@ -1,11 +1,14 @@
 package backend.event_management_system.service;
 
 import backend.event_management_system.dto.InvitedUserRegistDto;
+import backend.event_management_system.dto.SocialLinksDto;
 import backend.event_management_system.dto.UsersDto;
 import backend.event_management_system.exceptions.*;
 import backend.event_management_system.jwt.JwtTokenProvider;
 import backend.event_management_system.models.Roles;
+import backend.event_management_system.models.SocialLinks;
 import backend.event_management_system.models.Users;
+import backend.event_management_system.repository.SocialLinksRepository;
 import backend.event_management_system.repository.UsersRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,11 +23,13 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -38,9 +43,9 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
     private final S3Service s3Service;
     private final EmailService emailService;
     private final VerificationTokenService verificationTokenService;
-
+    private final SocialLinksRepository socialLinksRepository;
     @Autowired
-    public UsersService(LoginAttemptService loginAttemptService, UsersRepository usersRepository, JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder bCryptPasswordEncoder, @Lazy AuthenticationManager authenticationManager, S3Service s3Service, EmailService emailService, VerificationTokenService verificationTokenService) {
+    public UsersService(LoginAttemptService loginAttemptService, SocialLinksRepository socialLinksRepository , UsersRepository usersRepository, JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder bCryptPasswordEncoder, @Lazy AuthenticationManager authenticationManager, S3Service s3Service, EmailService emailService, VerificationTokenService verificationTokenService) {
         this.loginAttemptService = loginAttemptService;
         this.usersRepository = usersRepository;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -49,6 +54,7 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
         this.s3Service = s3Service;
         this.emailService = emailService;
         this.verificationTokenService = verificationTokenService;
+        this.socialLinksRepository = socialLinksRepository;
     }
 
     @Override
@@ -236,6 +242,10 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
         return usersRepository.findByInviteCode(code).orElse(null);
     }
 
+    List<SocialLinks> getSocialLinks(Users user) {
+        return user.getSocialLinks();
+    }
+
     @Transactional
     public Users registerInvitedUser(InvitedUserRegistDto registrationDto) throws Exception {
         if (!validateInviteCode(registrationDto.getInviteCode())) {
@@ -271,7 +281,73 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
         return savedUser;
     }
 
+
+    @Transactional
+    public List<Users> getUsersWithSocialLinks() {
+        return usersRepository.findAllWithSocialLinks();
+    }
+
+    @Transactional
+    public UsersDto getUserWithSocialLinksByEmail(String email) {
+        Users user=  usersRepository.findWithSocialLinksByEmail(email);
+        return getUsersDto(user);
+    }
+
     public void saveUser(Users user) {
         usersRepository.save(user);
+    }
+    @Transactional
+    public Users updatePublisher(@RequestBody UsersDto usersDto) {
+        Users user = usersRepository.findWithSocialLinksByEmail(usersDto.getEmail());;
+        user.setSocialLinks(setSocialLinks(user, usersDto.getSocialLinks()));
+        user.setCountryCode(usersDto.getCountryCode());
+        user.setPhoneNumber(usersDto.getPhoneNumber());
+        user.setBio(usersDto.getBio());
+        usersRepository.save(user);
+        return user;
+    }
+
+    public List<SocialLinks> setSocialLinks(Users user, List<SocialLinks> socialLinks) {
+        socialLinks.forEach(socialLink -> {
+            socialLink.setUser(user);
+            socialLinksRepository.save(socialLink);
+        });
+        return socialLinks;
+    }
+    public SocialLinksDto convertToSocialLinksDto(SocialLinks socialLinks) {
+        return SocialLinksDto.builder()
+                .id(socialLinks.getId())
+                .platform(socialLinks.getPlatform())
+                .url(socialLinks.getUrl())
+                .build();
+    }
+
+
+    public UsersDto getUsersDto(Users user) {
+        //get social links
+        List<SocialLinks> socialLinks = socialLinksRepository.findByUser(user);
+        List<SocialLinks> socialLinksList = socialLinks.stream().map(socialLinks1 -> {
+            socialLinks1.setUser(null);
+            return socialLinks1;
+        }).toList();
+        return UsersDto.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .profileImageUrl(user.getProfileImageUrl())
+                .phoneNumber(user.getPhoneNumber())
+                .role(user.getRole())
+                .joinDate(user.getJoinDate())
+                .lastLoginDate(user.getLastLoginDate())
+                .lastLoginDateDisplay(user.getLastLoginDateDisplay())
+                .enabled(user.isEnabled())
+                .verificationToken(user.getVerificationToken())
+                .verificationTokenExpiryDate(user.getVerificationTokenExpiryDate())
+                .countryCode(user.getCountryCode())
+                .totalTickets(user.getTotalTickets())
+                .loyaltyPoints(user.getLoyaltyPoints())
+                .bio(user.getBio())
+                .socialLinks(socialLinksList)
+                .build();
     }
 }
