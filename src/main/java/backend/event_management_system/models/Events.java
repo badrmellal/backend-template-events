@@ -19,7 +19,7 @@ public class Events {
     private String eventDescription;
     @ElementCollection
     @CollectionTable(name = "event_images", joinColumns = @JoinColumn(name = "event_id"))
-    @Column(name = "image_url", columnDefinition = "varchar(255)")
+    @Column(name = "image_url", columnDefinition = "varchar(1000)")
     private List<String> eventImages = new ArrayList<>();
     private String eventVideo;
     private String eventCurrency;

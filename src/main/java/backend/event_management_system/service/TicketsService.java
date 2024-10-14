@@ -103,6 +103,7 @@ public class TicketsService implements TicketServiceInterface {
                 .eventName(ticket.getEvent().getEventName())
                 .eventDescription(ticket.getEvent().getEventDescription())
                 .eventDate(ticket.getEvent().getEventDate())
+                .eventCurrency(ticket.getEvent().getEventCurrency())
                 .build();
         EventTicketTypes eve = ticket.getTicketType();
         return TicketsDto.builder()

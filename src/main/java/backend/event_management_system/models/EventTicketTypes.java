@@ -1,5 +1,6 @@
 package backend.event_management_system.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Embeddable;
 import lombok.Getter;
 import lombok.Setter;
@@ -7,6 +8,7 @@ import lombok.Setter;
 @Embeddable
 @Getter
 @Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EventTicketTypes {
     private String name;
     private float price;

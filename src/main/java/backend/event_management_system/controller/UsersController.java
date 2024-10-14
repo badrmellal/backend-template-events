@@ -6,6 +6,7 @@ import backend.event_management_system.dto.UsersDto;
 import backend.event_management_system.exceptions.*;
 import backend.event_management_system.jwt.JwtTokenProvider;
 import backend.event_management_system.models.Roles;
+import backend.event_management_system.models.Tickets;
 import backend.event_management_system.models.Users;
 import backend.event_management_system.service.LoyaltyService;
 import backend.event_management_system.service.UsersService;
@@ -22,10 +23,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URI;
+<<<<<<< Updated upstream
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+=======
+import java.util.*;
+import java.util.stream.Collectors;
+>>>>>>> Stashed changes
 
 @RestController
 @RequestMapping(path = {"/user"})
@@ -249,6 +255,7 @@ public class UsersController {
         Users user = usersService.findUserByEmail(email);
         return ResponseEntity.ok(user.getTotalTickets());
     }
+
 
     @DeleteMapping(path = {"/delete/{id}"})
     @PreAuthorize("hasAuthority('user:delete')")

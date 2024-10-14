@@ -38,7 +38,7 @@ public class TicketsController {
                                                   @RequestParam int quantity,
                                                   @RequestParam String ticketTypeName,
                                                   @RequestParam String paymentMethod,
-                                                  @RequestParam(required = false) String promoCode) throws EmailNotFoundException {
+                                                     @RequestParam(required = false) String promoCode) throws EmailNotFoundException {
         String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
         Users user = usersService.findUserByEmail(email);
         Events event = eventsRepository.findById(eventId).orElseThrow(
@@ -55,8 +55,9 @@ public class TicketsController {
             float discountedPrice = originalPrice * (1 - discountPercentage);
             ticket.setTotalAmount(discountedPrice);
 
+            String currency = event.getEventCurrency();
             // Adding loyalty points
-            loyaltyService.addLoyaltyPoints(user, discountedPrice);
+            loyaltyService.addLoyaltyPoints(user, discountedPrice, currency);
 
             // Adding ticket to user's tickets set
             user.addTicket(ticket);
@@ -164,6 +165,24 @@ public class TicketsController {
         return ResponseEntity.ok(tickets);
     }
 
+    @GetMapping("/event-tickets/user/{eventId}")
+    @PreAuthorize("hasAuthority('event:read')")
+    public ResponseEntity<List<TicketsDto>> getUserTicketsForEvent(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long eventId) throws EmailNotFoundException {
+        String email = jwtTokenProvider.getEmailFromToken(token.substring(7));
+        Users user = usersService.findUserByEmail(email);
+        Events event = eventsRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+
+        List<Tickets> tickets = ticketsService.getTicketsByUserAndEvent(user, event);
+        List<TicketsDto> ticketDtos = tickets.stream()
+                .map(ticketsService::convertToDto)
+                .toList();
+
+        return ResponseEntity.ok(ticketDtos);
+    }
+
     @GetMapping("/user-loyalty-discount")
     @PreAuthorize("hasAuthority('event:read')")
     public ResponseEntity<Double> getUserLoyaltyDiscount(@RequestHeader("Authorization") String token) throws EmailNotFoundException {
@@ -172,7 +191,6 @@ public class TicketsController {
         double discountPercentage = loyaltyService.getDiscountPercentage(user);
         return ResponseEntity.ok(discountPercentage);
     }
-
 
     @DeleteMapping
     @PreAuthorize("hasAuthority('event:approve')")

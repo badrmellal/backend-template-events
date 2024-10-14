@@ -2,20 +2,28 @@ package backend.event_management_system.service;
 
 import backend.event_management_system.constant.EventsSpecialFiltering;
 import backend.event_management_system.dto.EventsDto;
+import backend.event_management_system.dto.UpdateEventDto;
 import backend.event_management_system.models.EventTicketTypes;
 import backend.event_management_system.models.Events;
 import backend.event_management_system.repository.EventsRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class EventsService implements EventServiceInterface {
+
+    private static final Logger logger = LoggerFactory.getLogger(EventsService.class);
+
 
     private final EventsRepository eventsRepository;
     private final S3Service s3Service;
@@ -76,6 +84,39 @@ public class EventsService implements EventServiceInterface {
                 .build();
     }
 
+
+    public UpdateEventDto getUpdateEventDto(Events event) {
+        List<String> presignedImageUrls = event.getEventImages().stream()
+                .map(this::generatePresignedUrl)
+                .collect(Collectors.toList());
+
+        String presignedVideoUrl = event.getEventVideo() != null ? generatePresignedUrl(event.getEventVideo()) : null;
+
+        return UpdateEventDto.builder()
+                .id(event.getId())
+                .eventName(event.getEventName())
+                .eventCategory(event.getEventCategory())
+                .eventDescription(event.getEventDescription())
+                .isFreeEvent(event.isFreeEvent())
+                .eventCurrency(event.getEventCurrency())
+                .eventDate(event.getEventDate())
+                .addressLocation(event.getAddressLocation())
+                .googleMapsUrl(event.getGoogleMapsUrl())
+                .eventImages(presignedImageUrls)
+                .eventVideo(presignedVideoUrl)
+                .ticketTypes(event.getTicketTypes())
+                .totalTickets(event.getTotalTickets())
+                .isApproved(event.isApproved())
+                .eventCreationDate(event.getEventCreationDate())
+                .eventManagerUsername(event.getEventManagerUsername())
+                .build();
+    }
+
+    private String generatePresignedUrl(String s3Url) {
+        String objectKey = extractObjectKeyFromUrl(s3Url);
+        return s3Service.generatePresignedUrl(objectKey);
+    }
+
     @Override
     public List<EventsDto> getEventsByUsername(String publisherEmail, Boolean toProcessUrls) {
         List<Events> events = eventsRepository.findByEventManagerUsername(publisherEmail);
@@ -107,24 +148,61 @@ public class EventsService implements EventServiceInterface {
                     event.setEventCategory(updatedEvent.getEventCategory());
                     event.setEventDescription(updatedEvent.getEventDescription());
                     event.setFreeEvent(updatedEvent.isFreeEvent());
-                    if (updatedEvent.getEventImages() != null && !updatedEvent.getEventImages().isEmpty()) {
-                        event.setEventImages(updatedEvent.getEventImages());
+
+                    // Handle images
+                    List<String> currentImageUrls = event.getEventImages();
+                    List<String> updatedImageUrls = updatedEvent.getEventImages();
+
+                    logger.info("Current image URLs: {}", currentImageUrls);
+                    logger.info("Updated image URLs: {}", updatedImageUrls);
+
+                    // Find images to delete (in current but not in updated)
+                    List<String> imagesToDelete = currentImageUrls.stream()
+                            .filter(url -> !updatedImageUrls.contains(url))
+                            .collect(Collectors.toList());
+
+                    logger.info("Images to be deleted: {}", imagesToDelete);
+
+                    // Delete images not present in the update
+                    for (String url : imagesToDelete) {
+                        try {
+                            s3Service.deleteEventFile(url);
+                            logger.info("Successfully deleted image: {}", url);
+                        } catch (Exception e) {
+                            logger.error("Failed to delete image: {}", url, e);
+                        }
                     }
-                    if (updatedEvent.getEventVideo() != null) {
+
+                    event.setEventImages(updatedImageUrls);
+
+                    // Handle video
+                    if (updatedEvent.getEventVideo() != null && !updatedEvent.getEventVideo().equals(event.getEventVideo())) {
+                        if (event.getEventVideo() != null) {
+                            s3Service.deleteEventFile(event.getEventVideo());
+                        }
                         event.setEventVideo(updatedEvent.getEventVideo());
+                    } else if (updatedEvent.getEventVideo() == null && event.getEventVideo() != null) {
+                        s3Service.deleteEventFile(event.getEventVideo());
+                        event.setEventVideo(null);
                     }
+
+
                     event.setEventDate(updatedEvent.getEventDate());
-                    event.setApproved(false);
+                    event.setApproved(false);  // Mark event as not approved for further review
                     event.setAddressLocation(updatedEvent.getAddressLocation());
                     event.setGoogleMapsUrl(updatedEvent.getGoogleMapsUrl());
+
+                    // Handle ticket types
                     event.getTicketTypes().clear();
                     for (EventTicketTypes ticketType : updatedTicketTypes) {
                         event.addTicketType(ticketType);
                     }
-                    return eventsRepository.save(event);
+
+                    return eventsRepository.save(event);  // Save the updated event
                 })
                 .orElseThrow(() -> new RuntimeException("Event not found"));
     }
+
 
     @Override
     public void deleteEvent(Long id) {
@@ -208,6 +286,29 @@ public class EventsService implements EventServiceInterface {
         return event;
     }
 
+    public List<EventsDto> processEventDtoUrls(List<EventsDto> events) {
+        return events.stream()
+                .map(this::processEventDtoUrls)
+                .collect(Collectors.toList());
+    }
+
+    protected EventsDto processEventDtoUrls(EventsDto event) {
+        List<String> presignedUrls = new ArrayList<>();
+        for (String imageUrl : event.getEventImages()) {
+            String objectKey = extractObjectKeyFromUrl(imageUrl);
+            String presignedUrl = s3Service.generatePresignedUrl(objectKey);
+            presignedUrls.add(presignedUrl);
+        }
+        event.setEventImages(presignedUrls);
+
+        if (event.getEventVideo() != null) {
+            String videoObjectKey = extractObjectKeyFromUrl(event.getEventVideo());
+            String presignedVideoUrl = s3Service.generatePresignedUrl(videoObjectKey);
+            event.setEventVideo(presignedVideoUrl);
+        }
+        return event;
+    }
+
 
 private String extractObjectKeyFromUrl(String url) {
     try {
@@ -221,4 +322,5 @@ private String extractObjectKeyFromUrl(String url) {
         throw new RuntimeException("Error decoding URL", e);
     }
 }
+
 }

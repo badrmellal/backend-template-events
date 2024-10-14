@@ -23,7 +23,7 @@ import static java.util.Arrays.stream;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Setter
 @Getter
-public class Users implements Serializable, UserDetails {
+public class Users implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

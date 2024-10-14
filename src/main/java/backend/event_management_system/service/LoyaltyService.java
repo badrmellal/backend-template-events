@@ -7,17 +7,41 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class LoyaltyService {
 
     private final UsersRepository usersRepository;
+    private final Map<String, Double> exchangeRates;
+
 
     @Autowired
-    public LoyaltyService(UsersRepository usersRepository) {
+    public LoyaltyService(UsersRepository usersRepository, Map<String, Double> exchangeRates) {
         this.usersRepository = usersRepository;
+        this.exchangeRates = initializeExchangeRates();
     }
+
+    private Map<String, Double> initializeExchangeRates() {
+        Map<String, Double> rates = new HashMap<>();
+        rates.put("USD", 10.0);
+        rates.put("EUR", 9.2);
+        rates.put("GBP", 7.9);
+        rates.put("EGP", 309.0);
+        rates.put("KES", 1365.0);
+        rates.put("ZAR", 191.0);
+        rates.put("GHS", 128.0);
+        rates.put("TZS", 25600.0);
+        rates.put("MAD", 102.0);
+        rates.put("XOF", 6040.0);
+        rates.put("UGX", 38500.0);
+        rates.put("ZMW", 235.0);
+
+        return rates;
+    }
+
 
     @Transactional(readOnly = true)
     public int getLoyaltyPoints(Users user) {
@@ -63,10 +87,11 @@ public class LoyaltyService {
     }
 
     @Transactional
-    public void addLoyaltyPoints(Users user, double purchaseAmount) {
-        int pointsToAdd = (int) (purchaseAmount / 10); // 1 point for every $10 spent
+    public void addLoyaltyPoints(Users user, double purchaseAmount, String currency) {
+        double usdEquivalent = convertToUSD(purchaseAmount, currency);
+        int pointsToAdd = (int) Math.round(usdEquivalent / 10); // 1 point for every $10 USD equivalent spent
         user.setLoyaltyPoints(user.getLoyaltyPoints() + pointsToAdd);
-        user.setTotalSpend(user.getTotalSpend() + purchaseAmount);
+        user.setTotalSpend(user.getTotalSpend() + usdEquivalent);
         usersRepository.save(user);
     }
 
@@ -89,5 +114,20 @@ public class LoyaltyService {
         } else {
             return 0; // 0% discount for Bronze
         }
+    }
+
+
+    private double convertToUSD(double amount, String fromCurrency) {
+        Double rate = exchangeRates.get(fromCurrency);
+        if (rate == null) {
+            throw new IllegalArgumentException("Unsupported currency: " + fromCurrency);
+        }
+        return amount / rate;
+    }
+
+    // We need to use this later to update the currency from the UI
+    @Transactional
+    public void updateExchangeRate(String currency, double newRate) {
+        exchangeRates.put(currency, newRate);
     }
 }
