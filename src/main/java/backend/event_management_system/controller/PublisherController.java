@@ -3,9 +3,6 @@ package backend.event_management_system.controller;
 import backend.event_management_system.dto.EventsDto;
 import backend.event_management_system.dto.TicketsDto;
 import backend.event_management_system.exceptions.EmailNotFoundException;
-import backend.event_management_system.models.Events;
-import backend.event_management_system.models.Tickets;
-import backend.event_management_system.models.Users;
 import backend.event_management_system.service.EventsService;
 import backend.event_management_system.service.TicketsService;
 import backend.event_management_system.service.UsersService;
@@ -38,4 +35,13 @@ public class PublisherController {
 
         return ResponseEntity.ok(tickets);
     }
+
+    @GetMapping("events-details/{publisherEmail}")
+    @PreAuthorize("hasAuthority('event:create')")
+    public ResponseEntity<List<EventsDto>> getEventsDetails(@PathVariable String publisherEmail) throws EmailNotFoundException {
+        List<EventsDto> events = eventsService.getEventsByUsername(publisherEmail, false);
+
+        return ResponseEntity.ok(events);
+    }
+
 }
