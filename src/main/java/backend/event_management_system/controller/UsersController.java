@@ -23,15 +23,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URI;
-<<<<<<< Updated upstream
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-=======
-import java.util.*;
-import java.util.stream.Collectors;
->>>>>>> Stashed changes
+
 
 @RestController
 @RequestMapping(path = {"/user"})
@@ -264,9 +260,9 @@ public class UsersController {
     }
 
     @PostMapping("/update-publisher")
-    public ResponseEntity<UsersDto> updatePublisher(@RequestBody UsersDto userDto) {
-        Users updatedUser = usersService.updatePublisher(userDto);
-        return ResponseEntity.ok(convertToDto(updatedUser));
+    public ResponseEntity<UsersDto> updatePublisher(@RequestBody UsersDto userDto) throws EmailNotFoundException {
+        UsersDto updatedUser = usersService.updatePublisher(userDto);
+        return ResponseEntity.ok(updatedUser);
     }
 
     @GetMapping("/publisher-info")

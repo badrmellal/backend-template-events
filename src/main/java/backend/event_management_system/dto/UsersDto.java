@@ -26,5 +26,5 @@ public class UsersDto {
     private int totalTickets;
     private int loyaltyPoints;
     private String bio;
-    private List<SocialLinks> socialLinks;
+    private List<SocialLinksDto> socialLinks;
 }
