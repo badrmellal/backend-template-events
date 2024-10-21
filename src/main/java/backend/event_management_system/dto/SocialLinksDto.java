@@ -11,6 +11,5 @@ public class SocialLinksDto {
     private Long id;
     private String platform;
     private String url;
-    //always null
-    private Users user;
+
 }

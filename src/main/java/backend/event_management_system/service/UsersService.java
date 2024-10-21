@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -292,28 +293,96 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
         Users user=  usersRepository.findWithSocialLinksByEmail(email);
         return getUsersDto(user);
     }
-
+    @Transactional
     public void saveUser(Users user) {
         usersRepository.save(user);
     }
+//
+//    @Transactional
+//    public Users updatePublisher(@RequestBody UsersDto usersDto) {
+//        Users user = usersRepository.findWithSocialLinksByEmail(usersDto.getEmail());;
+//        List<SocialLinks> existingSocialLinks = socialLinksRepository.findByUser(user);
+//        socialLinksRepository.deleteAll(existingSocialLinks);
+//        user.setSocialLinks(setSocialLinks(user, usersDto.getSocialLinks()));
+//        user.setCountryCode(usersDto.getCountryCode());
+//        user.setPhoneNumber(usersDto.getPhoneNumber());
+//        user.setBio(usersDto.getBio());
+//        usersRepository.save(user);
+//        return user;
+//    }
+
     @Transactional
-    public Users updatePublisher(@RequestBody UsersDto usersDto) {
-        Users user = usersRepository.findWithSocialLinksByEmail(usersDto.getEmail());;
-        user.setSocialLinks(setSocialLinks(user, usersDto.getSocialLinks()));
-        user.setCountryCode(usersDto.getCountryCode());
-        user.setPhoneNumber(usersDto.getPhoneNumber());
-        user.setBio(usersDto.getBio());
-        usersRepository.save(user);
-        return user;
+    public SocialLinksDto createSocialLink(String userEmail, SocialLinksDto socialLinkDto) throws EmailNotFoundException {
+        Users user = usersRepository.findWithSocialLinksByEmail(userEmail);
+        if (user == null) {
+            throw new EmailNotFoundException("User not found with email: " + userEmail);
+        }
+
+        SocialLinks socialLink = new SocialLinks();
+        socialLink.setUser(user);
+        socialLink.setPlatform(socialLinkDto.getPlatform());
+        socialLink.setUrl(socialLinkDto.getUrl());
+        socialLink = socialLinksRepository.save(socialLink);
+
+        return convertToSocialLinksDto(socialLink);
     }
 
-    public List<SocialLinks> setSocialLinks(Users user, List<SocialLinks> socialLinks) {
-        socialLinks.forEach(socialLink -> {
-            socialLink.setUser(user);
-            socialLinksRepository.save(socialLink);
-        });
-        return socialLinks;
+    @Transactional
+    public void deleteSocialLink(Long socialLinkId) throws UserNotFoundException {
+        if (!socialLinksRepository.existsById(socialLinkId)) {
+            throw new UserNotFoundException("Social link not found with id: " + socialLinkId);
+        }
+        socialLinksRepository.deleteById(socialLinkId);
     }
+
+    @Transactional
+    public UsersDto updatePublisher(@RequestBody UsersDto usersDto) throws EmailNotFoundException {
+        Users user = usersRepository.findWithSocialLinksByEmail(usersDto.getEmail());
+        if (user == null) {
+            throw new EmailNotFoundException("User not found with email: " + usersDto.getEmail());
+        }
+
+        // Update user fields if provided
+        if (usersDto.getCountryCode() != null) user.setCountryCode(usersDto.getCountryCode());
+        if (usersDto.getPhoneNumber() != null) user.setPhoneNumber(usersDto.getPhoneNumber());
+        if (usersDto.getBio() != null) user.setBio(usersDto.getBio());
+
+        // Update social links
+        if (usersDto.getSocialLinks() != null) {
+            updateSocialLinks(user, usersDto.getSocialLinks());
+        }
+
+        usersRepository.save(user);
+        return getUsersDto(user);
+    }
+
+    private void updateSocialLinks(Users user, List<SocialLinksDto> socialLinksDto) {
+        List<SocialLinks> existingSocialLinks = user.getSocialLinks();
+        List<SocialLinks> updatedSocialLinks = new ArrayList<>();
+
+        for (SocialLinksDto dto : socialLinksDto) {
+            SocialLinks socialLink;
+            if (dto.getId() != null) {
+                socialLink = existingSocialLinks.stream()
+                        .filter(link -> link.getId().equals(dto.getId()))
+                        .findFirst()
+                        .orElseGet(SocialLinks::new);
+            } else {
+                socialLink = new SocialLinks();
+            }
+            socialLink.setUser(user);
+            socialLink.setPlatform(dto.getPlatform());
+            socialLink.setUrl(dto.getUrl());
+            updatedSocialLinks.add(socialLink);
+        }
+
+        // Remove links that are not in the updated list
+        existingSocialLinks.removeIf(link -> !updatedSocialLinks.contains(link));
+        existingSocialLinks.addAll(updatedSocialLinks);
+
+        socialLinksRepository.saveAll(existingSocialLinks);
+    }
+
     public SocialLinksDto convertToSocialLinksDto(SocialLinks socialLinks) {
         return SocialLinksDto.builder()
                 .id(socialLinks.getId())
@@ -326,10 +395,6 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
     public UsersDto getUsersDto(Users user) {
         //get social links
         List<SocialLinks> socialLinks = socialLinksRepository.findByUser(user);
-        List<SocialLinks> socialLinksList = socialLinks.stream().map(socialLinks1 -> {
-            socialLinks1.setUser(null);
-            return socialLinks1;
-        }).toList();
         return UsersDto.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -347,7 +412,7 @@ public class UsersService implements UserServiceInterface, UserDetailsService {
                 .totalTickets(user.getTotalTickets())
                 .loyaltyPoints(user.getLoyaltyPoints())
                 .bio(user.getBio())
-                .socialLinks(socialLinksList)
+                .socialLinks(socialLinks.stream().map(this::convertToSocialLinksDto).collect(Collectors.toList()))
                 .build();
     }
 }
